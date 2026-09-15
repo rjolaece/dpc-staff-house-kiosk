@@ -105,7 +105,7 @@ export default function PhoneKiosk() {
       setStatusMsg(
         data.action === 'CHECK_OUT'
           ? data.message || '✅ Room Checked Out!'
-          : data.message || `✅ Room assigned to ${selectedStaff?.full_name}!`
+          : data.message || `✅ Room assigned to ${selectedStaff?.full_name || 'Staff'}!`
       );
       
       setStep('SUCCESS');
@@ -153,7 +153,7 @@ export default function PhoneKiosk() {
             return (
               <div
                 key={room.id}
-                className={`p-2 rounded-xl text-center flex flex-col justify-between min-h-[75px] border transition-all duration-300 ${
+                className={`p-2 rounded-xl text-center flex flex-col justify-between min-h-[90px] border transition-all duration-300 ${
                   isOccupied
                     ? 'bg-amber-500/10 border-amber-500/40 text-amber-200 shadow-[0_0_12px_rgba(245,158,11,0.15)]'
                     : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.1)]'
@@ -180,6 +180,15 @@ export default function PhoneKiosk() {
                       <span className="text-[8px] text-amber-400 font-semibold block mt-0.5">
                         ⏱️ {calculateDuration(room.checked_in_at)}
                       </span>
+
+                      {/* DEV SIMULATION: CHECK-OUT BUTTON */}
+                      <button
+                        onClick={() => handleFobScan(room.room_number)}
+                        className="mt-1 py-0.5 px-1 bg-rose-500/20 hover:bg-rose-500/40 border border-rose-500/40 text-rose-300 text-[8px] rounded font-mono transition active:scale-95"
+                        title="Simulate scanning this room key fob to check out"
+                      >
+                        ⚡ Sim Check-Out
+                      </button>
                     </>
                   ) : (
                     <span className="text-emerald-400/80 uppercase tracking-widest text-[8px] font-extrabold py-2">
@@ -262,12 +271,20 @@ export default function PhoneKiosk() {
 
       {/* STEP 3: SCAN KEY */}
       {step === 'SCAN_KEY' && (
-        <div className="flex-1 my-4 flex flex-col items-center justify-center text-center p-8 bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-2xl">
-          <div className="animate-bounce text-5xl mb-4">🔑</div>
-          <h2 className="text-xl font-bold text-white mb-2">Room {selectedRoom?.room_number} Selected</h2>
-          <p className="text-xs text-slate-300 mb-6 max-w-xs leading-relaxed">
+        <div className="flex-1 my-4 flex flex-col items-center justify-center text-center p-6 bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-2xl">
+          <div className="animate-bounce text-4xl mb-3">🔑</div>
+          <h2 className="text-lg font-bold text-white mb-1">Room {selectedRoom?.room_number} Selected</h2>
+          <p className="text-xs text-slate-300 mb-4">
             Grab <span className="text-amber-400 font-bold">Key {selectedRoom?.room_number}</span> from the rack and tap its fob on the scanner below.
           </p>
+
+          {/* DEV SIMULATION: CHECK-IN BUTTON */}
+          <button
+            onClick={() => handleFobScan(selectedRoom?.room_number || '101')}
+            className="mb-4 px-3 py-2 bg-amber-500/20 border border-amber-500/40 text-amber-300 rounded-xl text-xs font-mono hover:bg-amber-500/30 transition active:scale-95"
+          >
+            ⚡ Dev Simulation: Tap Fob {selectedRoom?.room_number}
+          </button>
 
           <button onClick={() => resetKiosk(0)} className="text-xs text-slate-400 hover:text-white underline">Cancel</button>
         </div>

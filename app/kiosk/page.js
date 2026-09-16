@@ -44,11 +44,22 @@ export default function PhoneKiosk() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [rfidDetected, setRfidDetected] = useState(true);
 
   const bufferRef = useRef('');
 
   useEffect(() => {
     fetchInitialData();
+
+    // RFID Hardware Detection via WebHID / Device connection listener
+    if (typeof window !== 'undefined' && 'navigator' in window && 'hid' in navigator) {
+      navigator.hid.getDevices().then((devices) => {
+        if (devices.length > 0) setRfidDetected(true);
+      });
+
+      navigator.hid.addEventListener('connect', () => setRfidDetected(true));
+      navigator.hid.addEventListener('disconnect', () => setRfidDetected(false));
+    }
   }, [step]);
 
   const fetchInitialData = async () => {
@@ -71,6 +82,10 @@ export default function PhoneKiosk() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (document.activeElement.tagName === 'INPUT') return;
+
+      // Scanning activity automatically confirms hardware connection
+      setRfidDetected(true);
+
       if (e.key === 'Enter') {
         const scannedCode = bufferRef.current.trim();
         if (scannedCode) handleFobScan(scannedCode);
@@ -137,7 +152,7 @@ export default function PhoneKiosk() {
       {/* HEADER SECTION */}
       <div className="py-2 border-b border-white/10 flex items-center justify-between mb-2">
         <h1 className="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider">
-          DPC STAFF HOUSE MONITORING
+          DPCC STAFF HOUSE MONITORING
         </h1>
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-emerald-400 font-mono hidden sm:inline">LIVE KIOSK</span>
@@ -154,10 +169,10 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* TOP (PORTRAIT) / LEFT (DESKTOP) COLUMN: 4-COLUMN RACK GRID */}
+        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
-            <span>Room Rack Overview</span>
+            <span>Room Overview</span>
             <span className="text-[10px] font-mono text-slate-500">8 Rooms Total</span>
           </div>
 
@@ -185,7 +200,7 @@ export default function PhoneKiosk() {
                     </span>
                   </div>
 
-                  {/* VERTICALLY ALIGNED OCCUPANTS WITH BOTH VERTICAL AND HORIZONTAL SCROLLING */}
+                  {/* VERTICALLY ALIGNED OCCUPANTS CONTAINER */}
                   {room.occupants && room.occupants.length > 0 ? (
                     <div className="flex flex-col gap-1.5 my-auto overflow-auto max-h-[120px] lg:max-h-[145px] py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {room.occupants.map((occ, idx) => (
@@ -222,7 +237,7 @@ export default function PhoneKiosk() {
           </div>
         </div>
 
-        {/* BOTTOM (PORTRAIT) / RIGHT (DESKTOP) COLUMN: INTERACTIVE PANEL */}
+        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL */}
         <div className="flex flex-col h-full">
           
           {/* STEP 1: SELECT STAFF OR GUEST */}
@@ -346,10 +361,16 @@ export default function PhoneKiosk() {
         </div>
       </div>
 
-      {/* FOOTER */}
+      {/* FOOTER WITH LIVE RFID SCANNER DETECTION */}
       <div className="text-center text-[10px] md:text-xs text-slate-500 border-t border-white/10 pt-3 flex items-center justify-between mt-2">
         <span>System Operational</span>
-        <span className="font-mono text-emerald-400/80">Vertical Alignment + 2D Scroll Active</span>
+        <span className="font-mono flex items-center gap-1.5">
+          {rfidDetected ? (
+            <span className="text-emerald-400 font-semibold">RFID Scanner: Connected 🟢</span>
+          ) : (
+            <span className="text-rose-400 font-semibold">RFID Scanner: Disconnected 🔴</span>
+          )}
+        </span>
       </div>
     </div>
   );

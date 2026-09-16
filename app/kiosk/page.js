@@ -185,13 +185,13 @@ export default function PhoneKiosk() {
                     </span>
                   </div>
 
-                  {/* VERTICALLY ALIGNED OCCUPANTS CONTAINER WITH HIDDEN SCROLLBARS */}
+                  {/* RESPONSIVE SCROLL CONTAINER: HORIZONTAL ON MOBILE, VERTICAL ON DESKTOP */}
                   {room.occupants && room.occupants.length > 0 ? (
-                    <div className="flex flex-col gap-1.5 my-auto overflow-y-auto max-h-[120px] lg:max-h-[145px] py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="flex flex-row sm:flex-col gap-1.5 my-auto overflow-x-auto sm:overflow-y-auto max-h-[120px] lg:max-h-[145px] py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {room.occupants.map((occ, idx) => (
                         <div 
                           key={idx} 
-                          className="w-full bg-black/40 rounded-lg p-2 text-[8.5px] text-left leading-tight border border-white/5 shadow-inner flex flex-col justify-between shrink-0"
+                          className="min-w-[110px] sm:min-w-full bg-black/40 rounded-lg p-2 text-[8.5px] text-left leading-tight border border-white/5 shadow-inner flex flex-col justify-between shrink-0"
                         >
                           <div className="font-bold truncate text-slate-100">👤 {occ.staff_name}</div>
                           
@@ -349,7 +349,7 @@ export default function PhoneKiosk() {
       {/* FOOTER */}
       <div className="text-center text-[10px] md:text-xs text-slate-500 border-t border-white/10 pt-3 flex items-center justify-between mt-2">
         <span>System Operational</span>
-        <span className="font-mono text-emerald-400/80">Hidden Scrollbars Active</span>
+        <span className="font-mono text-emerald-400/80">Mobile Horizontal & Desktop Vertical Active</span>
       </div>
     </div>
   );

@@ -88,7 +88,7 @@ export default function PhoneKiosk() {
     } catch (err) {
       setErrorMsg('Failed to load initial data.');
     } finally {
-      // Extended refresh animation duration to 4000ms
+      // 4000ms duration for sustained background glow
       setTimeout(() => setIsRefreshing(false), 4000);
     }
   };
@@ -188,7 +188,7 @@ export default function PhoneKiosk() {
             onClick={fetchInitialData}
             title="Refresh Data"
             disabled={isRefreshing}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all duration-300 backdrop-blur-md shadow-sm disabled:opacity-80 ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all duration-500 backdrop-blur-md shadow-sm disabled:opacity-80 ${
               isRefreshing 
                 ? 'bg-blue-600/30 border-cyan-400 text-cyan-300 ring-2 ring-blue-500/50' 
                 : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-blue-400/40 text-slate-300 hover:text-white active:scale-95'
@@ -229,7 +229,7 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH HIGH-VISIBILITY BACKGROUND PULSE */}
+        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH SMOOTH BACKGROUND PULSE EXIT */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Overview</span>
@@ -237,10 +237,14 @@ export default function PhoneKiosk() {
           </div>
 
           <div className="relative rounded-2xl flex-1 flex">
-            {/* VIBRANT AMBIENT BACKGROUND GLOW BLOOM */}
-            {isRefreshing && (
-              <div className="absolute inset-[-15px] rounded-3xl bg-gradient-to-r from-cyan-500/40 via-blue-600/50 to-indigo-500/40 blur-3xl animate-pulse pointer-events-none opacity-80" />
-            )}
+            {/* SMOOTH EXIT FADING BACKGROUND GLOW LAYER */}
+            <div 
+              className={`absolute inset-[-15px] rounded-3xl bg-gradient-to-r from-cyan-500/40 via-blue-600/50 to-indigo-500/40 blur-3xl pointer-events-none transition-all duration-1000 ease-out ${
+                isRefreshing 
+                  ? 'opacity-80 scale-100 animate-pulse' 
+                  : 'opacity-0 scale-95'
+              }`} 
+            />
 
             {/* ROOM GRID CONTAINER */}
             <div className="grid grid-cols-4 gap-2.5 p-3 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl bg-slate-950/80 flex-1 items-stretch relative z-10">
@@ -305,16 +309,20 @@ export default function PhoneKiosk() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL WITH HIGH-VISIBILITY BACKGROUND PULSE */}
+        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL WITH SMOOTH BACKGROUND PULSE EXIT */}
         <div className="flex flex-col h-full">
           
           {/* STEP 1: SELECT STAFF OR GUEST */}
           {step === 'SELECT_STAFF' && (
             <div className="relative rounded-2xl h-full flex">
-              {/* VIBRANT AMBIENT BACKGROUND GLOW BLOOM */}
-              {isRefreshing && (
-                <div className="absolute inset-[-15px] rounded-3xl bg-gradient-to-r from-cyan-500/40 via-blue-600/50 to-indigo-500/40 blur-3xl animate-pulse pointer-events-none opacity-80" />
-              )}
+              {/* SMOOTH EXIT FADING BACKGROUND GLOW LAYER */}
+              <div 
+                className={`absolute inset-[-15px] rounded-3xl bg-gradient-to-r from-cyan-500/40 via-blue-600/50 to-indigo-500/40 blur-3xl pointer-events-none transition-all duration-1000 ease-out ${
+                  isRefreshing 
+                    ? 'opacity-80 scale-100 animate-pulse' 
+                    : 'opacity-0 scale-95'
+                }`} 
+              />
 
               {/* INTERACTIVE PANEL CONTAINER */}
               <div className="flex-1 flex flex-col p-4 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl bg-slate-950/80 h-full relative z-10">

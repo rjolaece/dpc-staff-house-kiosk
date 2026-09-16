@@ -88,7 +88,7 @@ export default function PhoneKiosk() {
     } catch (err) {
       setErrorMsg('Failed to load initial data.');
     } finally {
-      setTimeout(() => setIsRefreshing(false), 1000);
+      setTimeout(() => setIsRefreshing(false), 900);
     }
   };
 
@@ -175,7 +175,7 @@ export default function PhoneKiosk() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-6 font-sans flex flex-col justify-between max-w-md md:max-w-4xl lg:max-w-7xl mx-auto">
       
-      {/* HEADER SECTION - SINGLE LINE TITLE WITH REFRESH BUTTON */}
+      {/* HEADER SECTION */}
       <div className="py-2 border-b border-white/10 flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-3 truncate">
           <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider whitespace-nowrap truncate">
@@ -236,9 +236,9 @@ export default function PhoneKiosk() {
           </div>
 
           <div 
-            className={`grid grid-cols-4 gap-2.5 p-3 rounded-2xl border flex-1 items-stretch transition-all duration-500 ${
+            className={`grid grid-cols-4 gap-2.5 p-3 rounded-2xl border flex-1 items-stretch transition-all duration-300 ${
               isRefreshing 
-                ? 'bg-blue-900/20 border-blue-400/60 ring-2 ring-blue-500/50 shadow-[0_0_35px_rgba(59,130,246,0.35)] animate-pulse' 
+                ? 'bg-blue-900/20 border-blue-400 ring-2 ring-blue-500/80 shadow-[0_0_30px_rgba(59,130,246,0.45)]' 
                 : 'bg-white/5 border-white/10 shadow-2xl backdrop-blur-xl'
             }`}
           >
@@ -308,9 +308,9 @@ export default function PhoneKiosk() {
           {/* STEP 1: SELECT STAFF OR GUEST */}
           {step === 'SELECT_STAFF' && (
             <div 
-              className={`flex-1 flex flex-col p-4 rounded-2xl border h-full transition-all duration-500 ${
+              className={`flex-1 flex flex-col p-4 rounded-2xl border h-full transition-all duration-300 ${
                 isRefreshing 
-                  ? 'bg-blue-900/20 border-blue-400/60 ring-2 ring-blue-500/50 shadow-[0_0_35px_rgba(59,130,246,0.35)] animate-pulse' 
+                  ? 'bg-blue-900/20 border-blue-400 ring-2 ring-blue-500/80 shadow-[0_0_30px_rgba(59,130,246,0.45)]' 
                   : 'bg-white/5 border-white/10 shadow-2xl backdrop-blur-xl'
               }`}
             >

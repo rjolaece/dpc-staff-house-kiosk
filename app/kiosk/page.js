@@ -185,13 +185,13 @@ export default function PhoneKiosk() {
                     </span>
                   </div>
 
-                  {/* BOTH VERTICAL & HORIZONTAL SCROLLING CONTAINER */}
+                  {/* VERTICALLY ALIGNED OCCUPANTS CONTAINER WITH HIDDEN SCROLLBARS */}
                   {room.occupants && room.occupants.length > 0 ? (
-                    <div className="flex flex-row flex-wrap sm:flex-nowrap gap-2 my-auto overflow-auto max-h-[120px] lg:max-h-[140px] custom-scrollbar py-1">
+                    <div className="flex flex-col gap-1.5 my-auto overflow-y-auto max-h-[120px] lg:max-h-[145px] py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {room.occupants.map((occ, idx) => (
                         <div 
                           key={idx} 
-                          className="w-full sm:w-auto min-w-[115px] max-w-[140px] bg-black/40 rounded-lg p-2 text-[8.5px] text-left leading-tight border border-white/5 shadow-inner flex flex-col justify-between shrink-0"
+                          className="w-full bg-black/40 rounded-lg p-2 text-[8.5px] text-left leading-tight border border-white/5 shadow-inner flex flex-col justify-between shrink-0"
                         >
                           <div className="font-bold truncate text-slate-100">👤 {occ.staff_name}</div>
                           
@@ -263,8 +263,8 @@ export default function PhoneKiosk() {
                 </div>
               </div>
 
-              {/* Staff List */}
-              <div className="flex-1 grid grid-cols-1 gap-2 overflow-y-auto max-h-[360px] lg:max-h-[420px] pr-1 custom-scrollbar">
+              {/* Staff List with Hidden Scrollbars */}
+              <div className="flex-1 grid grid-cols-1 gap-2 overflow-y-auto max-h-[360px] lg:max-h-[420px] pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {filteredStaff.length > 0 ? (
                   filteredStaff.map((s) => (
                     <button
@@ -349,7 +349,7 @@ export default function PhoneKiosk() {
       {/* FOOTER */}
       <div className="text-center text-[10px] md:text-xs text-slate-500 border-t border-white/10 pt-3 flex items-center justify-between mt-2">
         <span>System Operational</span>
-        <span className="font-mono text-emerald-400/80">Vertical & Horizontal Scroll Active</span>
+        <span className="font-mono text-emerald-400/80">Hidden Scrollbars Active</span>
       </div>
     </div>
   );

@@ -1,46 +1,68 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 
-export async function POST(request) {
+export async function POST(req) {
   try {
-    const { key_fob_uid, staff_id, room_id } = await request.json();
+    const { key_fob_uid, staff_id, room_id } = await req.json();
 
     if (!key_fob_uid) {
       return NextResponse.json({ error: 'Key fob UID is required.' }, { status: 400 });
     }
 
-    // 1. Check for an active check-in (where check_out is null)
-    const { data: activeLog } = await supabase
+    // 1. CHECK-OUT: Check if this fob is currently assigned to an active stay
+    const { data: existingAssignment } = await supabase
       .from('room_assignments')
-      .select('*')
+      .select('*, rooms(room_number), staff(full_name)')
       .eq('fob_uid', key_fob_uid)
       .is('check_out', null)
       .maybeSingle();
 
-    if (activeLog) {
+    if (existingAssignment) {
       // Perform Check-Out
       await supabase
         .from('room_assignments')
         .update({ check_out: new Date().toISOString() })
-        .eq('id', activeLog.id);
+        .eq('id', existingAssignment.id);
 
-      await supabase
-        .from('rooms')
-        .update({ status: 'AVAILABLE' })
-        .eq('id', activeLog.room_id);
-
-      return NextResponse.json({ message: 'Check-out successful!', action: 'CHECK_OUT' });
+      return NextResponse.json({
+        action: 'CHECK_OUT',
+        message: `✅ ${existingAssignment.staff?.full_name || 'Staff'} checked out of Room ${existingAssignment.rooms?.room_number}!`,
+      });
     }
 
-    // 2. Perform Check-In
+    // 2. CHECK-IN: Require staff_id and room_id
     if (!staff_id || !room_id) {
       return NextResponse.json(
-        { error: 'Staff member and Room selection are required for check-in.' },
+        { error: 'Key fob is not checked in. Select staff & room first.' },
         { status: 400 }
       );
     }
 
-    const { error: insertErr } = await supabase.from('room_assignments').insert([
+    // Fetch room capacity details
+    const { data: roomData } = await supabase
+      .from('rooms')
+      .select('*')
+      .eq('id', room_id)
+      .single();
+
+    const maxCapacity = roomData?.room_number === '201' ? 4 : 2;
+
+    // Count current active occupants in this room
+    const { count } = await supabase
+      .from('room_assignments')
+      .select('*', { count: 'exact', head: true })
+      .eq('room_id', room_id)
+      .is('check_out', null);
+
+    if (count >= maxCapacity) {
+      return NextResponse.json(
+        { error: `Room ${roomData?.room_number} is full (${maxCapacity}/${maxCapacity} occupants).` },
+        { status: 400 }
+      );
+    }
+
+    // Record new check-in
+    await supabase.from('room_assignments').insert([
       {
         staff_id,
         room_id,
@@ -49,17 +71,11 @@ export async function POST(request) {
       },
     ]);
 
-    if (insertErr) {
-      return NextResponse.json({ error: insertErr.message }, { status: 500 });
-    }
-
-    await supabase
-      .from('rooms')
-      .update({ status: 'OCCUPIED' })
-      .eq('id', room_id);
-
-    return NextResponse.json({ message: 'Check-in successful!', action: 'CHECK_IN' });
+    return NextResponse.json({
+      action: 'CHECK_IN',
+      message: `✅ Check-in successful for Room ${roomData?.room_number}!`,
+    });
   } catch (err) {
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

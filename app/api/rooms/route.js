@@ -3,29 +3,46 @@ import { supabase } from '@/lib/supabaseClient';
 
 export async function GET() {
   try {
-    const { data: rooms, error: roomsErr } = await supabase
+    // Get all rooms
+    const { data: rooms, error: rErr } = await supabase
       .from('rooms')
       .select('*')
       .order('room_number', { ascending: true });
 
-    if (roomsErr) {
-      return NextResponse.json({ error: roomsErr.message }, { status: 500 });
-    }
+    if (rErr) return NextResponse.json({ error: rErr.message }, { status: 500 });
 
-    const { data: activeLogs } = await supabase
+    // Get all active assignments
+    const { data: activeAssignments, error: aErr } = await supabase
       .from('room_assignments')
-      .select('room_id, check_in, staff ( full_name )')
+      .select('*, staff(full_name)')
       .is('check_out', null);
 
-    const formattedRooms = (rooms || []).map((room) => {
-      const activeLog = activeLogs?.find((log) => String(log.room_id) === String(room.id));
+    if (aErr) return NextResponse.json({ error: aErr.message }, { status: 500 });
+
+    // Combine room capacities & occupant lists
+    const formattedRooms = rooms.map((room) => {
+      const maxCapacity = room.room_number === '201' ? 4 : 2;
+      const occupants = activeAssignments.filter((a) => a.room_id === room.id);
+      const count = occupants.length;
+
+      let status = 'AVAILABLE';
+      if (count >= maxCapacity) {
+        status = 'FULL';
+      } else if (count > 0) {
+        status = 'PARTIAL';
+      }
 
       return {
-        id: room.id,
-        room_number: room.room_number,
-        status: room.status,
-        occupant_name: activeLog?.staff?.full_name || null,
-        checked_in_at: activeLog?.check_in || null,
+        ...room,
+        max_capacity: maxCapacity,
+        occupant_count: count,
+        status: status,
+        occupants: occupants.map((o) => ({
+          assignment_id: o.id,
+          staff_name: o.staff?.full_name || 'Staff Member',
+          checked_in_at: o.check_in,
+          fob_uid: o.fob_uid,
+        })),
       };
     });
 

@@ -44,22 +44,32 @@ export default function PhoneKiosk() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [rfidDetected, setRfidDetected] = useState(true);
+  const [rfidDetected, setRfidDetected] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const bufferRef = useRef('');
+  const lastKeyTimeRef = useRef(0);
+  const disconnectTimerRef = useRef(null);
 
   useEffect(() => {
     fetchInitialData();
 
-    // RFID Hardware Detection via WebHID / Device connection listener
+    // Check for WebHID devices
     if (typeof window !== 'undefined' && 'navigator' in window && 'hid' in navigator) {
       navigator.hid.getDevices().then((devices) => {
-        if (devices.length > 0) setRfidDetected(true);
+        setRfidDetected(devices.length > 0);
       });
 
-      navigator.hid.addEventListener('connect', () => setRfidDetected(true));
-      navigator.hid.addEventListener('disconnect', () => setRfidDetected(false));
+      const handleConnect = () => setRfidDetected(true);
+      const handleDisconnect = () => setRfidDetected(false);
+
+      navigator.hid.addEventListener('connect', handleConnect);
+      navigator.hid.addEventListener('disconnect', handleDisconnect);
+
+      return () => {
+        navigator.hid.removeEventListener('connect', handleConnect);
+        navigator.hid.removeEventListener('disconnect', handleDisconnect);
+      };
     }
   }, [step]);
 
@@ -79,7 +89,7 @@ export default function PhoneKiosk() {
     } catch (err) {
       setErrorMsg('Failed to load initial data.');
     } finally {
-      setTimeout(() => setIsRefreshing(false), 600);
+      setTimeout(() => setIsRefreshing(false), 700);
     }
   };
 
@@ -87,8 +97,19 @@ export default function PhoneKiosk() {
     const handleKeyDown = (e) => {
       if (document.activeElement.tagName === 'INPUT') return;
 
-      // Scanning activity automatically confirms hardware connection
-      setRfidDetected(true);
+      const currentTime = Date.now();
+      const timeDiff = currentTime - lastKeyTimeRef.current;
+      lastKeyTimeRef.current = currentTime;
+
+      // Fast keystrokes indicate physical RFID reader hardware activity
+      if (timeDiff > 0 && timeDiff < 50) {
+        setRfidDetected(true);
+
+        if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
+        disconnectTimerRef.current = setTimeout(() => {
+          setRfidDetected(false);
+        }, 10000);
+      }
 
       if (e.key === 'Enter') {
         const scannedCode = bufferRef.current.trim();
@@ -100,7 +121,10 @@ export default function PhoneKiosk() {
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
+    };
   }, [selectedStaff, selectedRoom]);
 
   const handleFobScan = async (fobUid) => {
@@ -152,23 +176,26 @@ export default function PhoneKiosk() {
 
   return (
     <div 
-      className={`min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-6 font-sans flex flex-col justify-between max-w-md md:max-w-4xl lg:max-w-7xl mx-auto transition-all duration-500 ease-in-out ${
-        isRefreshing ? 'opacity-75 scale-[0.995] animate-pulse' : 'opacity-100 scale-100'
+      className={`min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-6 font-sans flex flex-col justify-between max-w-md md:max-w-4xl lg:max-w-7xl mx-auto rounded-3xl transition-all duration-500 ease-out ${
+        isRefreshing 
+          ? 'scale-[0.99] opacity-85 ring-2 ring-blue-500/50 shadow-[0_0_40px_rgba(59,130,246,0.35)] animate-pulse' 
+          : 'scale-100 opacity-100 shadow-none ring-0'
       }`}
     >
       
-      {/* HEADER SECTION - WITH MODERN REFRESH BUTTON & TEXT */}
+      {/* HEADER SECTION - SINGLE LINE TITLE WITH REFRESH BUTTON */}
       <div className="py-2 border-b border-white/10 flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-3 truncate">
           <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider whitespace-nowrap truncate">
             DPCC STAFF HOUSE MONITORING
           </h1>
 
-          {/* MODERN REFRESH BUTTON WITH TEXT */}
+          {/* REFRESH BUTTON WITH MODERN ICON & TEXT */}
           <button
             onClick={fetchInitialData}
             title="Refresh Data"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 active:bg-blue-600/30 border border-white/10 hover:border-blue-400/40 rounded-xl text-slate-300 hover:text-white active:scale-95 transition backdrop-blur-md shadow-sm"
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 active:bg-blue-600/30 border border-white/10 hover:border-blue-400/40 rounded-xl text-slate-300 hover:text-white active:scale-95 transition backdrop-blur-md shadow-sm disabled:opacity-50"
           >
             <svg
               className={`w-3.5 h-3.5 transition-transform duration-700 ${isRefreshing ? 'animate-spin text-blue-400' : ''}`}
@@ -395,14 +422,14 @@ export default function PhoneKiosk() {
         </div>
       </div>
 
-      {/* FOOTER */}
+      {/* FOOTER WITH RFID SCANNER STATUS */}
       <div className="text-center text-[10px] md:text-xs text-slate-500 border-t border-white/10 pt-3 flex items-center justify-between mt-2">
         <span>System Operational</span>
         <span className="font-mono flex items-center gap-1.5">
           {rfidDetected ? (
             <span className="text-emerald-400 font-semibold">RFID Scanner: Connected 🟢</span>
           ) : (
-            <span className="text-rose-400 font-semibold">RFID Scanner: Disconnected 🔴</span>
+            <span className="text-slate-400 font-semibold">RFID Scanner: Disconnected 🔴</span>
           )}
         </span>
       </div>

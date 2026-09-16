@@ -151,17 +151,17 @@ export default function PhoneKiosk() {
         </div>
       )}
 
-      {/* MAIN CONTAINER */}
+      {/* MAIN CONTAINER: SPLITS TO 2 COLUMNS ON DESKTOP (LG), STACKS TOP-TO-BOTTOM ON PORTRAIT */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: ROOM RACK (HORIZONTAL SCROLL ON MOBILE, GRID ON DESKTOP) */}
+        {/* TOP (PORTRAIT) / LEFT (DESKTOP) COLUMN: ORIGINAL 4-COLUMN GRID LAYOUT */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Rack Overview</span>
             <span className="text-[10px] font-mono text-slate-500">8 Rooms Total</span>
           </div>
 
-          <div className="flex flex-row lg:grid lg:grid-cols-4 gap-2.5 bg-white/5 p-3 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl flex-1 items-stretch overflow-x-auto lg:overflow-x-visible [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="grid grid-cols-4 gap-2.5 bg-white/5 p-3 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl flex-1 items-stretch">
             {allRooms.slice(0, 8).map((room) => {
               const isFull = room.status === 'FULL';
               const isPartial = room.status === 'PARTIAL';
@@ -169,7 +169,7 @@ export default function PhoneKiosk() {
               return (
                 <div
                   key={room.id}
-                  className={`min-w-[130px] lg:min-w-0 p-2.5 rounded-xl text-center flex flex-col justify-between min-h-[140px] lg:min-h-[190px] border transition-all shrink-0 lg:shrink ${
+                  className={`p-2.5 rounded-xl text-center flex flex-col justify-between min-h-[130px] lg:min-h-[190px] border transition-all ${
                     isFull
                       ? 'bg-rose-500/10 border-rose-500/40 text-rose-200'
                       : isPartial
@@ -185,9 +185,9 @@ export default function PhoneKiosk() {
                     </span>
                   </div>
 
-                  {/* VERTICALLY ALIGNED OCCUPANTS CONTAINER */}
+                  {/* GROUPED VERTICAL & HORIZONTAL SCROLL FOR OCCUPANTS CONTAINER */}
                   {room.occupants && room.occupants.length > 0 ? (
-                    <div className="flex flex-col gap-1.5 my-auto overflow-y-auto max-h-[120px] lg:max-h-[145px] py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="flex flex-col gap-1.5 my-auto overflow-auto max-h-[120px] lg:max-h-[145px] py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {room.occupants.map((occ, idx) => (
                         <div 
                           key={idx} 
@@ -222,7 +222,7 @@ export default function PhoneKiosk() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL */}
+        {/* BOTTOM (PORTRAIT) / RIGHT (DESKTOP) COLUMN: INTERACTIVE PANEL */}
         <div className="flex flex-col h-full">
           
           {/* STEP 1: SELECT STAFF OR GUEST */}
@@ -349,7 +349,7 @@ export default function PhoneKiosk() {
       {/* FOOTER */}
       <div className="text-center text-[10px] md:text-xs text-slate-500 border-t border-white/10 pt-3 flex items-center justify-between mt-2">
         <span>System Operational</span>
-        <span className="font-mono text-emerald-400/80">Mobile Horizontal Tile Scroll Active</span>
+        <span className="font-mono text-emerald-400/80">Reverted Portrait Rack & Group Scroll Active</span>
       </div>
     </div>
   );

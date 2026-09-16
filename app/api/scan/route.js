@@ -13,7 +13,6 @@ export async function POST(req) {
     // 1. CHECK-IN FLOW (Triggered when Staff & Room are selected)
     // -------------------------------------------------------------
     if (staff_id && room_id) {
-      // Fetch room details to check capacity
       const { data: roomData, error: rErr } = await supabase
         .from('rooms')
         .select('*')
@@ -26,7 +25,6 @@ export async function POST(req) {
 
       const maxCapacity = roomData.room_number === '201' ? 4 : 2;
 
-      // Count current active occupants in this specific room
       const { count, error: cErr } = await supabase
         .from('room_assignments')
         .select('*', { count: 'exact', head: true })
@@ -34,17 +32,16 @@ export async function POST(req) {
         .is('check_out', null);
 
       if (cErr) {
-        return NextResponse.json({ error: 'Error checking room capacity.' }, { status: 500 });
+        return NextResponse.json({ error: 'Error checking capacity.' }, { status: 500 });
       }
 
       if (count >= maxCapacity) {
         return NextResponse.json(
-          { error: `Room ${roomData.room_number} is already full (${maxCapacity}/${maxCapacity} occupants).` },
+          { error: `Room ${roomData.room_number} is full (${maxCapacity}/${maxCapacity}).` },
           { status: 400 }
         );
       }
 
-      // Ensure this specific staff member is not already checked into an active room
       const { data: activeStaff } = await supabase
         .from('room_assignments')
         .select('id')
@@ -59,7 +56,6 @@ export async function POST(req) {
         );
       }
 
-      // Record NEW check-in (without disturbing existing room occupants)
       const { error: insertErr } = await supabase
         .from('room_assignments')
         .insert([
@@ -82,17 +78,23 @@ export async function POST(req) {
     }
 
     // -------------------------------------------------------------
-    // 2. CHECK-OUT FLOW (Triggered when tapping a fob directly)
+    // 2. CHECK-OUT FLOW (Matches fob_uid or assignment id)
     // -------------------------------------------------------------
-    const { data: existingAssignment, error: findErr } = await supabase
+    const { data: activeAssignments, error: findErr } = await supabase
       .from('room_assignments')
       .select('*, rooms(room_number), staff(full_name)')
-      .eq('fob_uid', key_fob_uid)
-      .is('check_out', null)
-      .maybeSingle();
+      .is('check_out', null);
+
+    if (findErr) {
+      return NextResponse.json({ error: findErr.message }, { status: 500 });
+    }
+
+    // Match by fob_uid OR assignment id
+    const existingAssignment = activeAssignments?.find(
+      (a) => a.fob_uid === key_fob_uid || a.id === key_fob_uid
+    );
 
     if (existingAssignment) {
-      // Perform Check-Out for ONLY this specific assignment/fob
       const { error: outErr } = await supabase
         .from('room_assignments')
         .update({ check_out: new Date().toISOString() })

@@ -179,7 +179,7 @@ export default function PhoneKiosk() {
                         <div className="flex justify-between items-center text-amber-400 font-mono text-[7px] mt-0.5">
                           <span>⏱️ {calculateDuration(occ.checked_in_at)}</span>
                           <button
-                            onClick={() => handleFobScan(occ.fob_uid || room.room_number)}
+                            onClick={() => handleFobScan(occ.fob_uid || occ.assignment_id)}
                             className="text-rose-400 hover:underline font-bold"
                           >
                             Out

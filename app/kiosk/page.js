@@ -88,7 +88,8 @@ export default function PhoneKiosk() {
     } catch (err) {
       setErrorMsg('Failed to load initial data.');
     } finally {
-      setTimeout(() => setIsRefreshing(false), 2000);
+      // Extended refresh animation duration to 4000ms
+      setTimeout(() => setIsRefreshing(false), 4000);
     }
   };
 

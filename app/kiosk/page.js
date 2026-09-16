@@ -88,7 +88,7 @@ export default function PhoneKiosk() {
     } catch (err) {
       setErrorMsg('Failed to load initial data.');
     } finally {
-      setTimeout(() => setIsRefreshing(false), 900);
+      setTimeout(() => setIsRefreshing(false), 1000);
     }
   };
 
@@ -228,7 +228,7 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY */}
+        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH ROTATING GRADIENT BORDER SPINNER */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Overview</span>
@@ -236,138 +236,160 @@ export default function PhoneKiosk() {
           </div>
 
           <div 
-            className={`grid grid-cols-4 gap-2.5 p-3 rounded-2xl border flex-1 items-stretch transition-all duration-300 ${
-              isRefreshing 
-                ? 'bg-blue-900/20 border-blue-400 ring-2 ring-blue-500/80 shadow-[0_0_30px_rgba(59,130,246,0.45)]' 
-                : 'bg-white/5 border-white/10 shadow-2xl backdrop-blur-xl'
+            className={`relative p-[2px] rounded-2xl flex-1 flex transition-all duration-300 overflow-hidden ${
+              isRefreshing ? 'shadow-[0_0_35px_rgba(59,130,246,0.5)]' : ''
             }`}
           >
-            {allRooms.slice(0, 8).map((room) => {
-              const isFull = room.status === 'FULL';
-              const isPartial = room.status === 'PARTIAL';
+            {/* ROTATING SPINNER BORDER LAYER */}
+            {isRefreshing && (
+              <div className="absolute inset-[-100%] animate-spin bg-[conic-gradient(from_0deg,#3b82f6,#06b6d4,#6366f1,#3b82f6)] opacity-90" />
+            )}
 
-              return (
-                <div
-                  key={room.id}
-                  className={`p-2.5 rounded-xl text-center flex flex-col justify-between min-h-[130px] lg:min-h-[190px] border transition-all ${
-                    isFull
-                      ? 'bg-rose-500/10 border-rose-500/40 text-rose-200'
-                      : isPartial
-                      ? 'bg-amber-500/10 border-amber-500/40 text-amber-200'
-                      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
-                  }`}
-                >
-                  {/* Header: Room Number & Capacity Counter */}
-                  <div className="flex items-center justify-between text-[11px] lg:text-xs font-black border-b border-white/10 pb-1.5">
-                    <span>R-{room.room_number}</span>
-                    <span className="font-mono text-[10px] opacity-80">
-                      {room.occupant_count}/{room.max_capacity}
-                    </span>
-                  </div>
+            <div 
+              className={`grid grid-cols-4 gap-2.5 p-3 rounded-2xl border flex-1 items-stretch relative z-10 transition-all duration-300 ${
+                isRefreshing 
+                  ? 'bg-slate-950/90 border-transparent backdrop-blur-xl' 
+                  : 'bg-white/5 border-white/10 shadow-2xl backdrop-blur-xl'
+              }`}
+            >
+              {allRooms.slice(0, 8).map((room) => {
+                const isFull = room.status === 'FULL';
+                const isPartial = room.status === 'PARTIAL';
 
-                  {/* VERTICALLY ALIGNED OCCUPANTS CONTAINER */}
-                  {room.occupants && room.occupants.length > 0 ? (
-                    <div className="flex flex-col gap-1.5 my-auto overflow-auto max-h-[120px] lg:max-h-[145px] py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                      {room.occupants.map((occ, idx) => (
-                        <div 
-                          key={idx} 
-                          className="w-full bg-black/40 rounded-lg p-2 text-[8.5px] text-left leading-tight border border-white/5 shadow-inner flex flex-col justify-between shrink-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                        >
-                          <div className="font-bold whitespace-nowrap text-slate-100">👤 {occ.staff_name}</div>
-                          
-                          <div className="text-[7px] text-slate-400 font-mono mt-1 whitespace-nowrap">
-                            {formatCheckInTime(occ.checked_in_at)}
-                          </div>
-
-                          <div className="flex justify-between items-center text-amber-400 font-mono text-[7.5px] mt-1.5 whitespace-nowrap">
-                            <span>{calculateDuration(occ.checked_in_at)}</span>
-                            <button
-                              onClick={() => handleFobScan(occ.fob_uid || occ.assignment_id)}
-                              className="text-rose-400 hover:text-rose-300 hover:underline font-bold ml-2"
-                            >
-                              Out
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                return (
+                  <div
+                    key={room.id}
+                    className={`p-2.5 rounded-xl text-center flex flex-col justify-between min-h-[130px] lg:min-h-[190px] border transition-all ${
+                      isFull
+                        ? 'bg-rose-500/10 border-rose-500/40 text-rose-200'
+                        : isPartial
+                        ? 'bg-amber-500/10 border-amber-500/40 text-amber-200'
+                        : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+                    }`}
+                  >
+                    {/* Header: Room Number & Capacity Counter */}
+                    <div className="flex items-center justify-between text-[11px] lg:text-xs font-black border-b border-white/10 pb-1.5">
+                      <span>R-{room.room_number}</span>
+                      <span className="font-mono text-[10px] opacity-80">
+                        {room.occupant_count}/{room.max_capacity}
+                      </span>
                     </div>
-                  ) : (
-                    <span className="text-emerald-400/80 uppercase tracking-widest text-[9px] font-extrabold my-auto py-8 block text-center">
-                      Vacant
-                    </span>
-                  )}
-                </div>
-              );
-            })}
+
+                    {/* VERTICALLY ALIGNED OCCUPANTS CONTAINER */}
+                    {room.occupants && room.occupants.length > 0 ? (
+                      <div className="flex flex-col gap-1.5 my-auto overflow-auto max-h-[120px] lg:max-h-[145px] py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {room.occupants.map((occ, idx) => (
+                          <div 
+                            key={idx} 
+                            className="w-full bg-black/40 rounded-lg p-2 text-[8.5px] text-left leading-tight border border-white/5 shadow-inner flex flex-col justify-between shrink-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                          >
+                            <div className="font-bold whitespace-nowrap text-slate-100">👤 {occ.staff_name}</div>
+                            
+                            <div className="text-[7px] text-slate-400 font-mono mt-1 whitespace-nowrap">
+                              {formatCheckInTime(occ.checked_in_at)}
+                            </div>
+
+                            <div className="flex justify-between items-center text-amber-400 font-mono text-[7.5px] mt-1.5 whitespace-nowrap">
+                              <span>{calculateDuration(occ.checked_in_at)}</span>
+                              <button
+                                onClick={() => handleFobScan(occ.fob_uid || occ.assignment_id)}
+                                className="text-rose-400 hover:text-rose-300 hover:underline font-bold ml-2"
+                              >
+                                Out
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-emerald-400/80 uppercase tracking-widest text-[9px] font-extrabold my-auto py-8 block text-center">
+                        Vacant
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL */}
+        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL WITH ROTATING GRADIENT BORDER SPINNER */}
         <div className="flex flex-col h-full">
           
           {/* STEP 1: SELECT STAFF OR GUEST */}
           {step === 'SELECT_STAFF' && (
             <div 
-              className={`flex-1 flex flex-col p-4 rounded-2xl border h-full transition-all duration-300 ${
-                isRefreshing 
-                  ? 'bg-blue-900/20 border-blue-400 ring-2 ring-blue-500/80 shadow-[0_0_30px_rgba(59,130,246,0.45)]' 
-                  : 'bg-white/5 border-white/10 shadow-2xl backdrop-blur-xl'
+              className={`relative p-[2px] rounded-2xl h-full flex transition-all duration-300 overflow-hidden ${
+                isRefreshing ? 'shadow-[0_0_35px_rgba(59,130,246,0.5)]' : ''
               }`}
             >
-              
-              {/* Top Controls: Search & Guest Buttons */}
-              <div className="flex flex-col gap-2.5 mb-3">
-                <input
-                  type="text"
-                  placeholder="🔍 Search name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-slate-900/60 border border-white/10 text-white placeholder-slate-400 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500/60 transition shadow-inner"
-                />
+              {/* ROTATING SPINNER BORDER LAYER */}
+              {isRefreshing && (
+                <div className="absolute inset-[-100%] animate-spin bg-[conic-gradient(from_0deg,#3b82f6,#06b6d4,#6366f1,#3b82f6)] opacity-90" />
+              )}
 
-                {/* Glassmorphic Guest Buttons */}
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: '+ DPCC Guest', prefix: 'DPCC Guest: ' },
-                    { label: '+ Visitor', prefix: 'Visitor: ' },
-                    { label: '+ Contractor', prefix: 'Contractor: ' },
-                  ].map((type) => (
-                    <button
-                      key={type.label}
-                      onClick={() => {
-                        const name = prompt(`Enter ${type.label.replace('+', '').trim()} Name:`);
-                        if (name && name.trim()) {
-                          setSelectedStaff({ id: null, full_name: `${type.prefix}${name.trim()}` });
-                          setStep('SELECT_ROOM');
-                        }
-                      }}
-                      className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/40 text-slate-300 hover:text-white text-[11px] font-semibold py-2.5 rounded-xl text-center active:scale-95 transition shadow-sm"
-                    >
-                      {type.label}
-                    </button>
-                  ))}
+              <div 
+                className={`flex-1 flex flex-col p-4 rounded-2xl border h-full relative z-10 transition-all duration-300 ${
+                  isRefreshing 
+                    ? 'bg-slate-950/90 border-transparent backdrop-blur-xl' 
+                    : 'bg-white/5 border-white/10 shadow-2xl backdrop-blur-xl'
+                }`}
+              >
+                
+                {/* Top Controls: Search & Guest Buttons */}
+                <div className="flex flex-col gap-2.5 mb-3">
+                  <input
+                    type="text"
+                    placeholder="🔍 Search name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-slate-900/60 border border-white/10 text-white placeholder-slate-400 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500/60 transition shadow-inner"
+                  />
+
+                  {/* Glassmorphic Guest Buttons */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: '+ DPCC Guest', prefix: 'DPCC Guest: ' },
+                      { label: '+ Visitor', prefix: 'Visitor: ' },
+                      { label: '+ Contractor', prefix: 'Contractor: ' },
+                    ].map((type) => (
+                      <button
+                        key={type.label}
+                        onClick={() => {
+                          const name = prompt(`Enter ${type.label.replace('+', '').trim()} Name:`);
+                          if (name && name.trim()) {
+                            setSelectedStaff({ id: null, full_name: `${type.prefix}${name.trim()}` });
+                            setStep('SELECT_ROOM');
+                          }
+                        }}
+                        className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/40 text-slate-300 hover:text-white text-[11px] font-semibold py-2.5 rounded-xl text-center active:scale-95 transition shadow-sm"
+                      >
+                        {type.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Staff List */}
-              <div className="flex-1 grid grid-cols-1 gap-2 overflow-y-auto max-h-[360px] lg:max-h-[420px] pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {filteredStaff.length > 0 ? (
-                  filteredStaff.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => { setSelectedStaff(s); setStep('SELECT_ROOM'); }}
-                      className="w-full bg-white/5 hover:bg-blue-600/80 p-3.5 rounded-xl text-left font-medium text-sm md:text-base border border-white/10 flex items-center justify-between group transition-all active:scale-98"
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <span className="p-1.5 rounded-lg bg-white/10 group-hover:bg-white/20">👤</span>
-                        {s.full_name}
-                      </span>
-                      <span className="text-slate-500 group-hover:text-white transition">→</span>
-                    </button>
-                  ))
-                ) : (
-                  <p className="text-slate-500 text-xs text-center py-8">No staff members found.</p>
-                )}
+                {/* Staff List */}
+                <div className="flex-1 grid grid-cols-1 gap-2 overflow-y-auto max-h-[360px] lg:max-h-[420px] pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {filteredStaff.length > 0 ? (
+                    filteredStaff.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => { setSelectedStaff(s); setStep('SELECT_ROOM'); }}
+                        className="w-full bg-white/5 hover:bg-blue-600/80 p-3.5 rounded-xl text-left font-medium text-sm md:text-base border border-white/10 flex items-center justify-between group transition-all active:scale-98"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <span className="p-1.5 rounded-lg bg-white/10 group-hover:bg-white/20">👤</span>
+                          {s.full_name}
+                        </span>
+                        <span className="text-slate-500 group-hover:text-white transition">→</span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="text-slate-500 text-xs text-center py-8">No staff members found.</p>
+                  )}
+                </div>
               </div>
             </div>
           )}

@@ -172,12 +172,13 @@ export default function PhoneKiosk() {
                     room.occupants.map((occ, idx) => (
                       <div key={idx} className="bg-black/30 rounded p-1 text-[7.5px] text-left leading-tight">
                         <div className="font-bold truncate text-slate-200">👤 {occ.staff_name}</div>
-                        {/* Check-in Date & Time in Sep 12, 2026 2200H format */}
+                        {/* Clean timestamp display without calendar icon */}
                         <div className="text-[7px] text-slate-400 font-mono mt-0.5">
-                          📅 {formatCheckInTime(occ.checked_in_at)}
+                          {formatCheckInTime(occ.checked_in_at)}
                         </div>
+                        {/* Clean duration display without clock icon */}
                         <div className="flex justify-between items-center text-amber-400 font-mono text-[7px] mt-0.5">
-                          <span>⏱️ {calculateDuration(occ.checked_in_at)}</span>
+                          <span>{calculateDuration(occ.checked_in_at)}</span>
                           <button
                             onClick={() => handleFobScan(occ.fob_uid || occ.assignment_id)}
                             className="text-rose-400 hover:underline font-bold"

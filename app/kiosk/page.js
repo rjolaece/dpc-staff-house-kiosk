@@ -88,7 +88,7 @@ export default function PhoneKiosk() {
     } catch (err) {
       setErrorMsg('Failed to load initial data.');
     } finally {
-      setTimeout(() => setIsRefreshing(false), 2400);
+      setTimeout(() => setIsRefreshing(false), 2000);
     }
   };
 
@@ -189,12 +189,12 @@ export default function PhoneKiosk() {
             disabled={isRefreshing}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all duration-300 backdrop-blur-md shadow-sm disabled:opacity-80 ${
               isRefreshing 
-                ? 'bg-blue-600/30 border-blue-400 text-blue-300 ring-2 ring-blue-500/50' 
+                ? 'bg-blue-600/30 border-cyan-400 text-cyan-300 ring-2 ring-blue-500/50' 
                 : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-blue-400/40 text-slate-300 hover:text-white active:scale-95'
             }`}
           >
             <svg
-              className={`w-3.5 h-3.5 transition-transform duration-1000 ${isRefreshing ? 'animate-spin text-blue-400' : ''}`}
+              className={`w-3.5 h-3.5 transition-transform duration-1000 ${isRefreshing ? 'animate-spin text-cyan-400' : ''}`}
               fill="none"
               stroke="currentColor"
               strokeWidth="2.2"
@@ -228,34 +228,25 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH SMOOTH GRADIENT BORDER SPINNER */}
+        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH SMOOTH NEON PULSE */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Overview</span>
             <span className="text-[10px] font-mono text-slate-500">8 Rooms Total</span>
           </div>
 
-          <div className="relative p-[2px] rounded-2xl flex-1 flex transition-all duration-500 overflow-hidden">
-            {/* AMBIENT GLOW BACKDROP */}
+          <div className="relative rounded-2xl flex-1 flex transition-all duration-500">
+            {/* AMBIENT SOFT PULSE BACKDROP */}
             {isRefreshing && (
-              <div 
-                className="absolute inset-[-150%] bg-[conic-gradient(from_0deg,#22d3ee,#3b82f6,#6366f1,#a855f7,#22d3ee)] opacity-70 blur-xl will-change-transform" 
-                style={{ animation: 'spin 4s linear infinite' }}
-              />
+              <div className="absolute inset-0 rounded-2xl bg-blue-500/20 blur-xl animate-pulse" />
             )}
 
-            {/* SMOOTH SPINNING NEON GRADIENT BORDER */}
-            {isRefreshing && (
-              <div 
-                className="absolute inset-[-150%] bg-[conic-gradient(from_0deg,#22d3ee,#3b82f6,#6366f1,#a855f7,#22d3ee)] opacity-95 will-change-transform" 
-                style={{ animation: 'spin 4s linear infinite' }}
-              />
-            )}
-
-            {/* MAINTAINED DARK GLASSMORPHIC BACKGROUND */}
+            {/* MAINTAINED DARK GLASSMORPHIC BACKGROUND WITH GLOWING PULSE BORDER */}
             <div 
-              className={`grid grid-cols-4 gap-2.5 p-3 rounded-2xl border flex-1 items-stretch relative z-10 transition-all duration-300 bg-slate-950/85 backdrop-blur-xl ${
-                isRefreshing ? 'border-transparent' : 'border-white/10 shadow-2xl'
+              className={`grid grid-cols-4 gap-2.5 p-3 rounded-2xl border flex-1 items-stretch relative z-10 transition-all duration-500 bg-slate-950/85 backdrop-blur-xl ${
+                isRefreshing 
+                  ? 'border-cyan-400/80 ring-2 ring-blue-500/80 shadow-[0_0_35px_rgba(59,130,246,0.4)] animate-pulse' 
+                  : 'border-white/10 shadow-2xl ring-0'
               }`}
             >
               {allRooms.slice(0, 8).map((room) => {
@@ -319,32 +310,23 @@ export default function PhoneKiosk() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL WITH SMOOTH GRADIENT BORDER SPINNER */}
+        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL WITH SMOOTH NEON PULSE */}
         <div className="flex flex-col h-full">
           
           {/* STEP 1: SELECT STAFF OR GUEST */}
           {step === 'SELECT_STAFF' && (
-            <div className="relative p-[2px] rounded-2xl h-full flex transition-all duration-500 overflow-hidden">
-              {/* AMBIENT GLOW BACKDROP */}
+            <div className="relative rounded-2xl h-full flex transition-all duration-500">
+              {/* AMBIENT SOFT PULSE BACKDROP */}
               {isRefreshing && (
-                <div 
-                  className="absolute inset-[-150%] bg-[conic-gradient(from_0deg,#22d3ee,#3b82f6,#6366f1,#a855f7,#22d3ee)] opacity-70 blur-xl will-change-transform" 
-                  style={{ animation: 'spin 4s linear infinite' }}
-                />
+                <div className="absolute inset-0 rounded-2xl bg-blue-500/20 blur-xl animate-pulse" />
               )}
 
-              {/* SMOOTH SPINNING NEON GRADIENT BORDER */}
-              {isRefreshing && (
-                <div 
-                  className="absolute inset-[-150%] bg-[conic-gradient(from_0deg,#22d3ee,#3b82f6,#6366f1,#a855f7,#22d3ee)] opacity-95 will-change-transform" 
-                  style={{ animation: 'spin 4s linear infinite' }}
-                />
-              )}
-
-              {/* MAINTAINED DARK GLASSMORPHIC BACKGROUND */}
+              {/* MAINTAINED DARK GLASSMORPHIC BACKGROUND WITH GLOWING PULSE BORDER */}
               <div 
-                className={`flex-1 flex flex-col p-4 rounded-2xl border h-full relative z-10 transition-all duration-300 bg-slate-950/85 backdrop-blur-xl ${
-                  isRefreshing ? 'border-transparent' : 'border-white/10 shadow-2xl'
+                className={`flex-1 flex flex-col p-4 rounded-2xl border h-full relative z-10 transition-all duration-500 bg-slate-950/85 backdrop-blur-xl ${
+                  isRefreshing 
+                    ? 'border-cyan-400/80 ring-2 ring-blue-500/80 shadow-[0_0_35px_rgba(59,130,246,0.4)] animate-pulse' 
+                    : 'border-white/10 shadow-2xl ring-0'
                 }`}
               >
                 

@@ -228,7 +228,7 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH BACKGROUND-ONLY PULSE */}
+        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH HIGH-VISIBILITY BACKGROUND PULSE */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Overview</span>
@@ -236,9 +236,9 @@ export default function PhoneKiosk() {
           </div>
 
           <div className="relative rounded-2xl flex-1 flex">
-            {/* ISOLATED BACKGROUND-ONLY PULSE (DOES NOT TOUCH ROOM TILES) */}
+            {/* VIBRANT AMBIENT BACKGROUND GLOW BLOOM */}
             {isRefreshing && (
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-blue-600/30 via-cyan-500/20 to-indigo-600/30 blur-2xl animate-pulse pointer-events-none" />
+              <div className="absolute inset-[-15px] rounded-3xl bg-gradient-to-r from-cyan-500/40 via-blue-600/50 to-indigo-500/40 blur-3xl animate-pulse pointer-events-none opacity-80" />
             )}
 
             {/* ROOM GRID CONTAINER */}
@@ -304,15 +304,15 @@ export default function PhoneKiosk() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL WITH BACKGROUND-ONLY PULSE */}
+        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL WITH HIGH-VISIBILITY BACKGROUND PULSE */}
         <div className="flex flex-col h-full">
           
           {/* STEP 1: SELECT STAFF OR GUEST */}
           {step === 'SELECT_STAFF' && (
             <div className="relative rounded-2xl h-full flex">
-              {/* ISOLATED BACKGROUND-ONLY PULSE (DOES NOT TOUCH STAFF PANEL TILES) */}
+              {/* VIBRANT AMBIENT BACKGROUND GLOW BLOOM */}
               {isRefreshing && (
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-blue-600/30 via-cyan-500/20 to-indigo-600/30 blur-2xl animate-pulse pointer-events-none" />
+                <div className="absolute inset-[-15px] rounded-3xl bg-gradient-to-r from-cyan-500/40 via-blue-600/50 to-indigo-500/40 blur-3xl animate-pulse pointer-events-none opacity-80" />
               )}
 
               {/* INTERACTIVE PANEL CONTAINER */}

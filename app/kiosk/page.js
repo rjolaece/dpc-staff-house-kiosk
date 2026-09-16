@@ -21,6 +21,20 @@ const calculateDuration = (checkedInAt) => {
   return `${Math.floor(diffInMs / (1000 * 60 * 60 * 24))}d`;
 };
 
+// Formats timestamp to: "Sep 12, 2026 2200H"
+const formatCheckInTime = (checkedInAt) => {
+  if (!checkedInAt) return '';
+  const date = parseLocalDate(checkedInAt);
+  
+  const month = date.toLocaleDateString('en-US', { month: 'short' });
+  const day = date.getDate();
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+
+  return `${month} ${day}, ${year} ${hours}${minutes}H`;
+};
+
 export default function PhoneKiosk() {
   const [step, setStep] = useState('SELECT_STAFF');
   const [staffList, setStaffList] = useState([]);
@@ -132,12 +146,11 @@ export default function PhoneKiosk() {
           {allRooms.slice(0, 8).map((room) => {
             const isFull = room.status === 'FULL';
             const isPartial = room.status === 'PARTIAL';
-            const isVacant = room.status === 'AVAILABLE';
 
             return (
               <div
                 key={room.id}
-                className={`p-1.5 rounded-xl text-center flex flex-col justify-between min-h-[105px] border transition-all ${
+                className={`p-1.5 rounded-xl text-center flex flex-col justify-between min-h-[115px] border transition-all ${
                   isFull
                     ? 'bg-rose-500/10 border-rose-500/40 text-rose-200'
                     : isPartial
@@ -153,13 +166,17 @@ export default function PhoneKiosk() {
                   </span>
                 </div>
 
-                {/* Occupant Names List */}
-                <div className="flex flex-col justify-start gap-1 my-1 overflow-y-auto max-h-[55px]">
+                {/* Occupant Names & Check-in Time */}
+                <div className="flex flex-col justify-start gap-1 my-1 overflow-y-auto max-h-[75px]">
                   {room.occupants && room.occupants.length > 0 ? (
                     room.occupants.map((occ, idx) => (
-                      <div key={idx} className="bg-black/30 rounded p-0.5 text-[7.5px] text-left leading-tight">
+                      <div key={idx} className="bg-black/30 rounded p-1 text-[7.5px] text-left leading-tight">
                         <div className="font-bold truncate text-slate-200">👤 {occ.staff_name}</div>
-                        <div className="flex justify-between text-amber-400 font-mono text-[7px]">
+                        {/* Check-in Date & Time in Sep 12, 2026 2200H format */}
+                        <div className="text-[7px] text-slate-400 font-mono mt-0.5">
+                          📅 {formatCheckInTime(occ.checked_in_at)}
+                        </div>
+                        <div className="flex justify-between items-center text-amber-400 font-mono text-[7px] mt-0.5">
                           <span>⏱️ {calculateDuration(occ.checked_in_at)}</span>
                           <button
                             onClick={() => handleFobScan(occ.fob_uid || room.room_number)}
@@ -171,7 +188,7 @@ export default function PhoneKiosk() {
                       </div>
                     ))
                   ) : (
-                    <span className="text-emerald-400/80 uppercase tracking-widest text-[8px] font-extrabold py-3">
+                    <span className="text-emerald-400/80 uppercase tracking-widest text-[8px] font-extrabold py-4">
                       Vacant
                     </span>
                   )}

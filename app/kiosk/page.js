@@ -88,8 +88,8 @@ export default function PhoneKiosk() {
     } catch (err) {
       setErrorMsg('Failed to load initial data.');
     } finally {
-      // Doubled refresh duration (2000ms) for smooth border spinning
-      setTimeout(() => setIsRefreshing(false), 2000);
+      // Sustained window so smooth rotation completes full cycle
+      setTimeout(() => setIsRefreshing(false), 2200);
     }
   };
 
@@ -229,7 +229,7 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH NEON BORDER SPINNER */}
+        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH SLOWER SMOOTH NEON SPINNER */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Overview</span>
@@ -237,18 +237,21 @@ export default function PhoneKiosk() {
           </div>
 
           <div 
-            className={`relative p-[2px] rounded-2xl flex-1 flex transition-all duration-300 overflow-hidden ${
+            className={`relative p-[2px] rounded-2xl flex-1 flex transition-all duration-500 overflow-hidden ${
               isRefreshing ? 'shadow-[0_0_35px_rgba(59,130,246,0.5)]' : ''
             }`}
           >
-            {/* ROTATING NEON BORDER LAYER */}
+            {/* ROTATING SLOW SMOOTH NEON BORDER LAYER */}
             {isRefreshing && (
-              <div className="absolute inset-[-100%] animate-spin bg-[conic-gradient(from_0deg,#3b82f6,#06b6d4,#6366f1,#3b82f6)] opacity-90" />
+              <div 
+                className="absolute inset-[-150%] bg-[conic-gradient(from_0deg,#3b82f6,#06b6d4,#6366f1,#3b82f6)] opacity-90 will-change-transform" 
+                style={{ animation: 'spin 3.5s linear infinite' }}
+              />
             )}
 
-            {/* MAINTAINED GLASSMORMIC INNER DARK BACKGROUND */}
+            {/* MAINTAINED GLASSMORPHIC INNER DARK BACKGROUND */}
             <div 
-              className={`grid grid-cols-4 gap-2.5 p-3 rounded-2xl border flex-1 items-stretch relative z-10 transition-all duration-300 bg-slate-950/80 backdrop-blur-xl ${
+              className={`grid grid-cols-4 gap-2.5 p-3 rounded-2xl border flex-1 items-stretch relative z-10 transition-all duration-300 bg-slate-950/85 backdrop-blur-xl ${
                 isRefreshing ? 'border-transparent' : 'border-white/10 shadow-2xl'
               }`}
             >
@@ -313,24 +316,27 @@ export default function PhoneKiosk() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL WITH NEON BORDER SPINNER */}
+        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL WITH SLOWER SMOOTH NEON SPINNER */}
         <div className="flex flex-col h-full">
           
           {/* STEP 1: SELECT STAFF OR GUEST */}
           {step === 'SELECT_STAFF' && (
             <div 
-              className={`relative p-[2px] rounded-2xl h-full flex transition-all duration-300 overflow-hidden ${
+              className={`relative p-[2px] rounded-2xl h-full flex transition-all duration-500 overflow-hidden ${
                 isRefreshing ? 'shadow-[0_0_35px_rgba(59,130,246,0.5)]' : ''
               }`}
             >
-              {/* ROTATING NEON BORDER LAYER */}
+              {/* ROTATING SLOW SMOOTH NEON BORDER LAYER */}
               {isRefreshing && (
-                <div className="absolute inset-[-100%] animate-spin bg-[conic-gradient(from_0deg,#3b82f6,#06b6d4,#6366f1,#3b82f6)] opacity-90" />
+                <div 
+                  className="absolute inset-[-150%] bg-[conic-gradient(from_0deg,#3b82f6,#06b6d4,#6366f1,#3b82f6)] opacity-90 will-change-transform" 
+                  style={{ animation: 'spin 3.5s linear infinite' }}
+                />
               )}
 
-              {/* MAINTAINED GLASSMORMIC INNER DARK BACKGROUND */}
+              {/* MAINTAINED GLASSMORPHIC INNER DARK BACKGROUND */}
               <div 
-                className={`flex-1 flex flex-col p-4 rounded-2xl border h-full relative z-10 transition-all duration-300 bg-slate-950/80 backdrop-blur-xl ${
+                className={`flex-1 flex flex-col p-4 rounded-2xl border h-full relative z-10 transition-all duration-300 bg-slate-950/85 backdrop-blur-xl ${
                   isRefreshing ? 'border-transparent' : 'border-white/10 shadow-2xl'
                 }`}
               >

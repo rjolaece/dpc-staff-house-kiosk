@@ -185,38 +185,37 @@ export default function PhoneKiosk() {
                     </span>
                   </div>
 
-                  {/* Occupant Details with Horizontal (Left-to-Right) Scroll */}
-                  <div className="flex flex-col gap-1.5 my-1 overflow-y-auto max-h-[120px] custom-scrollbar">
-                    {room.occupants && room.occupants.length > 0 ? (
-                      room.occupants.map((occ, idx) => (
+                  {/* UNIFIED HORIZONTAL SCROLL FOR ENTIRE OCCUPANTS GROUP */}
+                  {room.occupants && room.occupants.length > 0 ? (
+                    <div className="flex flex-row gap-2 my-auto overflow-x-auto custom-scrollbar py-1">
+                      {room.occupants.map((occ, idx) => (
                         <div 
                           key={idx} 
-                          className="bg-black/40 rounded-lg p-1.5 text-[8.5px] text-left leading-tight border border-white/5 shadow-inner overflow-x-auto whitespace-nowrap custom-scrollbar flex flex-col gap-0.5"
+                          className="min-w-[120px] max-w-[140px] bg-black/40 rounded-lg p-2 text-[8.5px] text-left leading-tight border border-white/5 shadow-inner flex flex-col justify-between shrink-0"
                         >
-                          <div className="font-bold text-slate-100">👤 {occ.staff_name}</div>
+                          <div className="font-bold truncate text-slate-100">👤 {occ.staff_name}</div>
                           
-                          {/* Horizontal scrollable timestamp line */}
-                          <div className="text-[7px] text-slate-400 font-mono">
+                          <div className="text-[7px] text-slate-400 font-mono mt-1 whitespace-nowrap truncate">
                             {formatCheckInTime(occ.checked_in_at)}
                           </div>
 
-                          <div className="flex justify-between items-center text-amber-400 font-mono text-[7.5px] mt-0.5">
+                          <div className="flex justify-between items-center text-amber-400 font-mono text-[7.5px] mt-1.5">
                             <span>{calculateDuration(occ.checked_in_at)}</span>
                             <button
                               onClick={() => handleFobScan(occ.fob_uid || occ.assignment_id)}
-                              className="text-rose-400 hover:text-rose-300 hover:underline font-bold ml-2"
+                              className="text-rose-400 hover:text-rose-300 hover:underline font-bold"
                             >
                               Out
                             </button>
                           </div>
                         </div>
-                      ))
-                    ) : (
-                      <span className="text-emerald-400/80 uppercase tracking-widest text-[9px] font-extrabold my-auto py-8 block text-center">
-                        Vacant
-                      </span>
-                    )}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-emerald-400/80 uppercase tracking-widest text-[9px] font-extrabold my-auto py-8 block text-center">
+                      Vacant
+                    </span>
+                  )}
                 </div>
               );
             })}
@@ -240,7 +239,7 @@ export default function PhoneKiosk() {
                   className="w-full bg-slate-900/60 border border-white/10 text-white placeholder-slate-400 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500/60 transition shadow-inner"
                 />
 
-                {/* Seamless Glassmorphic Guest Buttons */}
+                {/* Glassmorphic Guest Buttons */}
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { label: '+ DPCC Guest', prefix: 'DPCC Guest: ' },
@@ -350,7 +349,7 @@ export default function PhoneKiosk() {
       {/* FOOTER */}
       <div className="text-center text-[10px] md:text-xs text-slate-500 border-t border-white/10 pt-3 flex items-center justify-between mt-2">
         <span>System Operational</span>
-        <span className="font-mono text-emerald-400/80">Horizontal Occupant Scrolling Active</span>
+        <span className="font-mono text-emerald-400/80">Group Horizontal Occupant Scroll Active</span>
       </div>
     </div>
   );

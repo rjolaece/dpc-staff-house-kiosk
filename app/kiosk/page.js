@@ -220,8 +220,8 @@ export default function PhoneKiosk() {
               className="w-full bg-white/5 border border-white/10 text-white placeholder-slate-400 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500/60"
             />
 
-            {/* AUTO-PREFIXED GUEST BUTTONS */}
-            <div className="grid grid-cols-3 gap-1.5">
+            {/* SEAMLESS GLASSMORPHIC GUEST BUTTONS */}
+            <div className="grid grid-cols-3 gap-2">
               {[
                 { label: '+ DPCC Guest', prefix: 'DPCC Guest: ' },
                 { label: '+ Visitor', prefix: 'Visitor: ' },
@@ -236,7 +236,7 @@ export default function PhoneKiosk() {
                       setStep('SELECT_ROOM');
                     }
                   }}
-                  className="bg-indigo-600/60 hover:bg-indigo-500 border border-indigo-400/30 text-indigo-100 text-[10px] font-bold py-2 rounded-xl text-center active:scale-95 transition"
+                  className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/40 text-slate-300 hover:text-white text-[11px] font-semibold py-2.5 rounded-xl text-center active:scale-95 transition backdrop-blur-md shadow-sm"
                 >
                   {type.label}
                 </button>

@@ -154,14 +154,14 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY */}
+        {/* LEFT COLUMN: ROOM RACK (HORIZONTAL SCROLL ON MOBILE, GRID ON DESKTOP) */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Rack Overview</span>
             <span className="text-[10px] font-mono text-slate-500">8 Rooms Total</span>
           </div>
 
-          <div className="grid grid-cols-4 gap-2.5 bg-white/5 p-3 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl flex-1 items-stretch">
+          <div className="flex flex-row lg:grid lg:grid-cols-4 gap-2.5 bg-white/5 p-3 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl flex-1 items-stretch overflow-x-auto lg:overflow-x-visible [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {allRooms.slice(0, 8).map((room) => {
               const isFull = room.status === 'FULL';
               const isPartial = room.status === 'PARTIAL';
@@ -169,7 +169,7 @@ export default function PhoneKiosk() {
               return (
                 <div
                   key={room.id}
-                  className={`p-2.5 rounded-xl text-center flex flex-col justify-between min-h-[130px] lg:min-h-[190px] border transition-all ${
+                  className={`min-w-[130px] lg:min-w-0 p-2.5 rounded-xl text-center flex flex-col justify-between min-h-[140px] lg:min-h-[190px] border transition-all shrink-0 lg:shrink ${
                     isFull
                       ? 'bg-rose-500/10 border-rose-500/40 text-rose-200'
                       : isPartial
@@ -185,13 +185,13 @@ export default function PhoneKiosk() {
                     </span>
                   </div>
 
-                  {/* RESPONSIVE SCROLL CONTAINER: HORIZONTAL ON MOBILE, VERTICAL ON DESKTOP */}
+                  {/* VERTICALLY ALIGNED OCCUPANTS CONTAINER */}
                   {room.occupants && room.occupants.length > 0 ? (
-                    <div className="flex flex-row sm:flex-col gap-1.5 my-auto overflow-x-auto sm:overflow-y-auto max-h-[120px] lg:max-h-[145px] py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="flex flex-col gap-1.5 my-auto overflow-y-auto max-h-[120px] lg:max-h-[145px] py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {room.occupants.map((occ, idx) => (
                         <div 
                           key={idx} 
-                          className="min-w-[110px] sm:min-w-full bg-black/40 rounded-lg p-2 text-[8.5px] text-left leading-tight border border-white/5 shadow-inner flex flex-col justify-between shrink-0"
+                          className="w-full bg-black/40 rounded-lg p-2 text-[8.5px] text-left leading-tight border border-white/5 shadow-inner flex flex-col justify-between shrink-0"
                         >
                           <div className="font-bold truncate text-slate-100">👤 {occ.staff_name}</div>
                           
@@ -263,7 +263,7 @@ export default function PhoneKiosk() {
                 </div>
               </div>
 
-              {/* Staff List with Hidden Scrollbars */}
+              {/* Staff List */}
               <div className="flex-1 grid grid-cols-1 gap-2 overflow-y-auto max-h-[360px] lg:max-h-[420px] pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {filteredStaff.length > 0 ? (
                   filteredStaff.map((s) => (
@@ -349,7 +349,7 @@ export default function PhoneKiosk() {
       {/* FOOTER */}
       <div className="text-center text-[10px] md:text-xs text-slate-500 border-t border-white/10 pt-3 flex items-center justify-between mt-2">
         <span>System Operational</span>
-        <span className="font-mono text-emerald-400/80">Mobile Horizontal & Desktop Vertical Active</span>
+        <span className="font-mono text-emerald-400/80">Mobile Horizontal Tile Scroll Active</span>
       </div>
     </div>
   );

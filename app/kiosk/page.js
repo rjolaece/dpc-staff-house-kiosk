@@ -151,7 +151,7 @@ export default function PhoneKiosk() {
         </div>
       )}
 
-      {/* MAIN CONTAINER - EQUALIZED 50/50 SPLIT ON DESKTOP */}
+      {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
         {/* LEFT COLUMN: 8-ROOM GRID DISPLAY */}
@@ -185,23 +185,26 @@ export default function PhoneKiosk() {
                     </span>
                   </div>
 
-                  {/* Occupant Names & Check-in Time */}
-                  <div className="flex flex-col justify-start gap-1.5 my-1 overflow-y-auto max-h-[120px] pr-0.5 custom-scrollbar">
+                  {/* Occupant Details with Horizontal (Left-to-Right) Scroll */}
+                  <div className="flex flex-col gap-1.5 my-1 overflow-y-auto max-h-[120px] custom-scrollbar">
                     {room.occupants && room.occupants.length > 0 ? (
                       room.occupants.map((occ, idx) => (
-                        <div key={idx} className="bg-black/40 rounded-lg p-1.5 text-[8.5px] text-left leading-tight border border-white/5 shadow-inner">
-                          <div className="font-bold truncate text-slate-100">👤 {occ.staff_name}</div>
+                        <div 
+                          key={idx} 
+                          className="bg-black/40 rounded-lg p-1.5 text-[8.5px] text-left leading-tight border border-white/5 shadow-inner overflow-x-auto whitespace-nowrap custom-scrollbar flex flex-col gap-0.5"
+                        >
+                          <div className="font-bold text-slate-100">👤 {occ.staff_name}</div>
                           
-                          {/* Single-line timestamp */}
-                          <div className="text-[7px] text-slate-400 font-mono mt-0.5 whitespace-nowrap truncate">
+                          {/* Horizontal scrollable timestamp line */}
+                          <div className="text-[7px] text-slate-400 font-mono">
                             {formatCheckInTime(occ.checked_in_at)}
                           </div>
 
-                          <div className="flex justify-between items-center text-amber-400 font-mono text-[7.5px] mt-1">
+                          <div className="flex justify-between items-center text-amber-400 font-mono text-[7.5px] mt-0.5">
                             <span>{calculateDuration(occ.checked_in_at)}</span>
                             <button
                               onClick={() => handleFobScan(occ.fob_uid || occ.assignment_id)}
-                              className="text-rose-400 hover:text-rose-300 hover:underline font-bold"
+                              className="text-rose-400 hover:text-rose-300 hover:underline font-bold ml-2"
                             >
                               Out
                             </button>
@@ -261,7 +264,7 @@ export default function PhoneKiosk() {
                 </div>
               </div>
 
-              {/* Staff List filling available space cleanly */}
+              {/* Staff List */}
               <div className="flex-1 grid grid-cols-1 gap-2 overflow-y-auto max-h-[360px] lg:max-h-[420px] pr-1 custom-scrollbar">
                 {filteredStaff.length > 0 ? (
                   filteredStaff.map((s) => (
@@ -347,7 +350,7 @@ export default function PhoneKiosk() {
       {/* FOOTER */}
       <div className="text-center text-[10px] md:text-xs text-slate-500 border-t border-white/10 pt-3 flex items-center justify-between mt-2">
         <span>System Operational</span>
-        <span className="font-mono text-emerald-400/80">Desktop Optimized & Multi-Occupancy Active</span>
+        <span className="font-mono text-emerald-400/80">Horizontal Occupant Scrolling Active</span>
       </div>
     </div>
   );

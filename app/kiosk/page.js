@@ -45,6 +45,7 @@ export default function PhoneKiosk() {
   const [statusMsg, setStatusMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [rfidDetected, setRfidDetected] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const bufferRef = useRef('');
 
@@ -63,6 +64,7 @@ export default function PhoneKiosk() {
   }, [step]);
 
   const fetchInitialData = async () => {
+    setIsRefreshing(true);
     try {
       const sRes = await fetch('/api/staff');
       const sData = await sRes.json();
@@ -76,6 +78,8 @@ export default function PhoneKiosk() {
       setAllRooms(Array.isArray(rData) ? rData : []);
     } catch (err) {
       setErrorMsg('Failed to load initial data.');
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
     }
   };
 
@@ -149,11 +153,25 @@ export default function PhoneKiosk() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-6 font-sans flex flex-col justify-between max-w-md md:max-w-4xl lg:max-w-7xl mx-auto transition-all duration-300">
       
-      {/* HEADER SECTION - SINGLE LINE TITLE */}
+      {/* HEADER SECTION - WITH REFRESH BUTTON */}
       <div className="py-2 border-b border-white/10 flex items-center justify-between gap-2 mb-2">
-        <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider whitespace-nowrap truncate">
-          DPCC STAFF HOUSE MONITORING
-        </h1>
+        <div className="flex items-center gap-3 truncate">
+          <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider whitespace-nowrap truncate">
+            DPCC STAFF HOUSE MONITORING
+          </h1>
+
+          {/* MANUAL REFRESH BUTTON */}
+          <button
+            onClick={fetchInitialData}
+            title="Refresh Data"
+            className="p-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-slate-300 hover:text-white active:scale-90 transition backdrop-blur-md"
+          >
+            <span className={`block text-xs md:text-sm ${isRefreshing ? 'animate-spin' : ''}`}>
+              🔄
+            </span>
+          </button>
+        </div>
+
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-[10px] text-emerald-400 font-mono hidden sm:inline">LIVE KIOSK</span>
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />

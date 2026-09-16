@@ -149,12 +149,12 @@ export default function PhoneKiosk() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-6 font-sans flex flex-col justify-between max-w-md md:max-w-4xl lg:max-w-7xl mx-auto transition-all duration-300">
       
-      {/* HEADER SECTION */}
-      <div className="py-2 border-b border-white/10 flex items-center justify-between mb-2">
-        <h1 className="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider">
+      {/* HEADER SECTION - SINGLE LINE TITLE */}
+      <div className="py-2 border-b border-white/10 flex items-center justify-between gap-2 mb-2">
+        <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider whitespace-nowrap truncate">
           DPCC STAFF HOUSE MONITORING
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <span className="text-[10px] text-emerald-400 font-mono hidden sm:inline">LIVE KIOSK</span>
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
         </div>
@@ -361,7 +361,7 @@ export default function PhoneKiosk() {
         </div>
       </div>
 
-      {/* FOOTER WITH LIVE RFID SCANNER DETECTION */}
+      {/* FOOTER */}
       <div className="text-center text-[10px] md:text-xs text-slate-500 border-t border-white/10 pt-3 flex items-center justify-between mt-2">
         <span>System Operational</span>
         <span className="font-mono flex items-center gap-1.5">

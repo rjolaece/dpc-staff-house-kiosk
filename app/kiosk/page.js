@@ -79,7 +79,7 @@ export default function PhoneKiosk() {
     } catch (err) {
       setErrorMsg('Failed to load initial data.');
     } finally {
-      setTimeout(() => setIsRefreshing(false), 500);
+      setTimeout(() => setIsRefreshing(false), 600);
     }
   };
 
@@ -151,24 +151,40 @@ export default function PhoneKiosk() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-6 font-sans flex flex-col justify-between max-w-md md:max-w-4xl lg:max-w-7xl mx-auto transition-all duration-300">
+    <div 
+      className={`min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-6 font-sans flex flex-col justify-between max-w-md md:max-w-4xl lg:max-w-7xl mx-auto transition-all duration-500 ease-in-out ${
+        isRefreshing ? 'opacity-75 scale-[0.995] animate-pulse' : 'opacity-100 scale-100'
+      }`}
+    >
       
-      {/* HEADER SECTION - WITH REFRESH BUTTON */}
+      {/* HEADER SECTION - WITH MODERN REFRESH BUTTON & TEXT */}
       <div className="py-2 border-b border-white/10 flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-3 truncate">
           <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider whitespace-nowrap truncate">
             DPCC STAFF HOUSE MONITORING
           </h1>
 
-          {/* MANUAL REFRESH BUTTON */}
+          {/* MODERN REFRESH BUTTON WITH TEXT */}
           <button
             onClick={fetchInitialData}
             title="Refresh Data"
-            className="p-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-slate-300 hover:text-white active:scale-90 transition backdrop-blur-md"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 active:bg-blue-600/30 border border-white/10 hover:border-blue-400/40 rounded-xl text-slate-300 hover:text-white active:scale-95 transition backdrop-blur-md shadow-sm"
           >
-            <span className={`block text-xs md:text-sm ${isRefreshing ? 'animate-spin' : ''}`}>
-              🔄
-            </span>
+            <svg
+              className={`w-3.5 h-3.5 transition-transform duration-700 ${isRefreshing ? 'animate-spin text-blue-400' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+              />
+            </svg>
+            <span className="text-xs font-semibold tracking-wide">Refresh</span>
           </button>
         </div>
 

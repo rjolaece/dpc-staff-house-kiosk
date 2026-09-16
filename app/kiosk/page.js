@@ -54,7 +54,6 @@ export default function PhoneKiosk() {
   useEffect(() => {
     fetchInitialData();
 
-    // Check for WebHID devices
     if (typeof window !== 'undefined' && 'navigator' in window && 'hid' in navigator) {
       navigator.hid.getDevices().then((devices) => {
         setRfidDetected(devices.length > 0);
@@ -89,7 +88,7 @@ export default function PhoneKiosk() {
     } catch (err) {
       setErrorMsg('Failed to load initial data.');
     } finally {
-      setTimeout(() => setIsRefreshing(false), 700);
+      setTimeout(() => setIsRefreshing(false), 1000);
     }
   };
 
@@ -101,7 +100,6 @@ export default function PhoneKiosk() {
       const timeDiff = currentTime - lastKeyTimeRef.current;
       lastKeyTimeRef.current = currentTime;
 
-      // Fast keystrokes indicate physical RFID reader hardware activity
       if (timeDiff > 0 && timeDiff < 50) {
         setRfidDetected(true);
 
@@ -175,13 +173,7 @@ export default function PhoneKiosk() {
   );
 
   return (
-    <div 
-      className={`min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-6 font-sans flex flex-col justify-between max-w-md md:max-w-4xl lg:max-w-7xl mx-auto rounded-3xl transition-all duration-500 ease-out ${
-        isRefreshing 
-          ? 'scale-[0.99] opacity-85 ring-2 ring-blue-500/50 shadow-[0_0_40px_rgba(59,130,246,0.35)] animate-pulse' 
-          : 'scale-100 opacity-100 shadow-none ring-0'
-      }`}
-    >
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-6 font-sans flex flex-col justify-between max-w-md md:max-w-4xl lg:max-w-7xl mx-auto">
       
       {/* HEADER SECTION - SINGLE LINE TITLE WITH REFRESH BUTTON */}
       <div className="py-2 border-b border-white/10 flex items-center justify-between gap-2 mb-2">
@@ -190,12 +182,16 @@ export default function PhoneKiosk() {
             DPCC STAFF HOUSE MONITORING
           </h1>
 
-          {/* REFRESH BUTTON WITH MODERN ICON & TEXT */}
+          {/* REFRESH BUTTON */}
           <button
             onClick={fetchInitialData}
             title="Refresh Data"
             disabled={isRefreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 active:bg-blue-600/30 border border-white/10 hover:border-blue-400/40 rounded-xl text-slate-300 hover:text-white active:scale-95 transition backdrop-blur-md shadow-sm disabled:opacity-50"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all duration-300 backdrop-blur-md shadow-sm disabled:opacity-80 ${
+              isRefreshing 
+                ? 'bg-blue-600/30 border-blue-400 text-blue-300 ring-2 ring-blue-500/50' 
+                : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-blue-400/40 text-slate-300 hover:text-white active:scale-95'
+            }`}
           >
             <svg
               className={`w-3.5 h-3.5 transition-transform duration-700 ${isRefreshing ? 'animate-spin text-blue-400' : ''}`}
@@ -211,7 +207,9 @@ export default function PhoneKiosk() {
                 d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
               />
             </svg>
-            <span className="text-xs font-semibold tracking-wide">Refresh</span>
+            <span className="text-xs font-semibold tracking-wide">
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </span>
           </button>
         </div>
 
@@ -237,7 +235,13 @@ export default function PhoneKiosk() {
             <span className="text-[10px] font-mono text-slate-500">8 Rooms Total</span>
           </div>
 
-          <div className="grid grid-cols-4 gap-2.5 bg-white/5 p-3 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl flex-1 items-stretch">
+          <div 
+            className={`grid grid-cols-4 gap-2.5 p-3 rounded-2xl border flex-1 items-stretch transition-all duration-500 ${
+              isRefreshing 
+                ? 'bg-blue-900/20 border-blue-400/60 ring-2 ring-blue-500/50 shadow-[0_0_35px_rgba(59,130,246,0.35)] animate-pulse' 
+                : 'bg-white/5 border-white/10 shadow-2xl backdrop-blur-xl'
+            }`}
+          >
             {allRooms.slice(0, 8).map((room) => {
               const isFull = room.status === 'FULL';
               const isPartial = room.status === 'PARTIAL';
@@ -303,7 +307,13 @@ export default function PhoneKiosk() {
           
           {/* STEP 1: SELECT STAFF OR GUEST */}
           {step === 'SELECT_STAFF' && (
-            <div className="flex-1 flex flex-col bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-xl shadow-2xl h-full">
+            <div 
+              className={`flex-1 flex flex-col p-4 rounded-2xl border h-full transition-all duration-500 ${
+                isRefreshing 
+                  ? 'bg-blue-900/20 border-blue-400/60 ring-2 ring-blue-500/50 shadow-[0_0_35px_rgba(59,130,246,0.35)] animate-pulse' 
+                  : 'bg-white/5 border-white/10 shadow-2xl backdrop-blur-xl'
+              }`}
+            >
               
               {/* Top Controls: Search & Guest Buttons */}
               <div className="flex flex-col gap-2.5 mb-3">

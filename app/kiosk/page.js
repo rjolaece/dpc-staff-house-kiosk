@@ -88,8 +88,7 @@ export default function PhoneKiosk() {
     } catch (err) {
       setErrorMsg('Failed to load initial data.');
     } finally {
-      // Sustained window so smooth rotation completes full cycle
-      setTimeout(() => setIsRefreshing(false), 2200);
+      setTimeout(() => setIsRefreshing(false), 2400);
     }
   };
 
@@ -229,27 +228,31 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH SLOWER SMOOTH NEON SPINNER */}
+        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH SMOOTH GRADIENT BORDER SPINNER */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Overview</span>
             <span className="text-[10px] font-mono text-slate-500">8 Rooms Total</span>
           </div>
 
-          <div 
-            className={`relative p-[2px] rounded-2xl flex-1 flex transition-all duration-500 overflow-hidden ${
-              isRefreshing ? 'shadow-[0_0_35px_rgba(59,130,246,0.5)]' : ''
-            }`}
-          >
-            {/* ROTATING SLOW SMOOTH NEON BORDER LAYER */}
+          <div className="relative p-[2px] rounded-2xl flex-1 flex transition-all duration-500 overflow-hidden">
+            {/* AMBIENT GLOW BACKDROP */}
             {isRefreshing && (
               <div 
-                className="absolute inset-[-150%] bg-[conic-gradient(from_0deg,#3b82f6,#06b6d4,#6366f1,#3b82f6)] opacity-90 will-change-transform" 
-                style={{ animation: 'spin 3.5s linear infinite' }}
+                className="absolute inset-[-150%] bg-[conic-gradient(from_0deg,#22d3ee,#3b82f6,#6366f1,#a855f7,#22d3ee)] opacity-70 blur-xl will-change-transform" 
+                style={{ animation: 'spin 4s linear infinite' }}
               />
             )}
 
-            {/* MAINTAINED GLASSMORPHIC INNER DARK BACKGROUND */}
+            {/* SMOOTH SPINNING NEON GRADIENT BORDER */}
+            {isRefreshing && (
+              <div 
+                className="absolute inset-[-150%] bg-[conic-gradient(from_0deg,#22d3ee,#3b82f6,#6366f1,#a855f7,#22d3ee)] opacity-95 will-change-transform" 
+                style={{ animation: 'spin 4s linear infinite' }}
+              />
+            )}
+
+            {/* MAINTAINED DARK GLASSMORPHIC BACKGROUND */}
             <div 
               className={`grid grid-cols-4 gap-2.5 p-3 rounded-2xl border flex-1 items-stretch relative z-10 transition-all duration-300 bg-slate-950/85 backdrop-blur-xl ${
                 isRefreshing ? 'border-transparent' : 'border-white/10 shadow-2xl'
@@ -316,25 +319,29 @@ export default function PhoneKiosk() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL WITH SLOWER SMOOTH NEON SPINNER */}
+        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL WITH SMOOTH GRADIENT BORDER SPINNER */}
         <div className="flex flex-col h-full">
           
           {/* STEP 1: SELECT STAFF OR GUEST */}
           {step === 'SELECT_STAFF' && (
-            <div 
-              className={`relative p-[2px] rounded-2xl h-full flex transition-all duration-500 overflow-hidden ${
-                isRefreshing ? 'shadow-[0_0_35px_rgba(59,130,246,0.5)]' : ''
-              }`}
-            >
-              {/* ROTATING SLOW SMOOTH NEON BORDER LAYER */}
+            <div className="relative p-[2px] rounded-2xl h-full flex transition-all duration-500 overflow-hidden">
+              {/* AMBIENT GLOW BACKDROP */}
               {isRefreshing && (
                 <div 
-                  className="absolute inset-[-150%] bg-[conic-gradient(from_0deg,#3b82f6,#06b6d4,#6366f1,#3b82f6)] opacity-90 will-change-transform" 
-                  style={{ animation: 'spin 3.5s linear infinite' }}
+                  className="absolute inset-[-150%] bg-[conic-gradient(from_0deg,#22d3ee,#3b82f6,#6366f1,#a855f7,#22d3ee)] opacity-70 blur-xl will-change-transform" 
+                  style={{ animation: 'spin 4s linear infinite' }}
                 />
               )}
 
-              {/* MAINTAINED GLASSMORPHIC INNER DARK BACKGROUND */}
+              {/* SMOOTH SPINNING NEON GRADIENT BORDER */}
+              {isRefreshing && (
+                <div 
+                  className="absolute inset-[-150%] bg-[conic-gradient(from_0deg,#22d3ee,#3b82f6,#6366f1,#a855f7,#22d3ee)] opacity-95 will-change-transform" 
+                  style={{ animation: 'spin 4s linear infinite' }}
+                />
+              )}
+
+              {/* MAINTAINED DARK GLASSMORPHIC BACKGROUND */}
               <div 
                 className={`flex-1 flex flex-col p-4 rounded-2xl border h-full relative z-10 transition-all duration-300 bg-slate-950/85 backdrop-blur-xl ${
                   isRefreshing ? 'border-transparent' : 'border-white/10 shadow-2xl'

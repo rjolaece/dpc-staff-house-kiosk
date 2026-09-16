@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 
 export async function GET() {
   try {
-    // Get all rooms
+    // 1. Get all rooms
     const { data: rooms, error: rErr } = await supabase
       .from('rooms')
       .select('*')
@@ -11,7 +11,7 @@ export async function GET() {
 
     if (rErr) return NextResponse.json({ error: rErr.message }, { status: 500 });
 
-    // Get all active assignments
+    // 2. Get active assignments with staff names AND guest names
     const { data: activeAssignments, error: aErr } = await supabase
       .from('room_assignments')
       .select('*, staff(full_name)')
@@ -19,7 +19,7 @@ export async function GET() {
 
     if (aErr) return NextResponse.json({ error: aErr.message }, { status: 500 });
 
-    // Combine room capacities & occupant lists
+    // 3. Format room occupant data
     const formattedRooms = rooms.map((room) => {
       const maxCapacity = room.room_number === '201' ? 4 : 2;
       const occupants = activeAssignments.filter((a) => a.room_id === room.id);
@@ -39,7 +39,8 @@ export async function GET() {
         status: status,
         occupants: occupants.map((o) => ({
           assignment_id: o.id,
-          staff_name: o.staff?.full_name || 'Staff Member',
+          // Prioritize staff name, fall back to guest_name, then 'Guest'
+          staff_name: o.staff?.full_name || o.guest_name || 'Guest',
           checked_in_at: o.check_in,
           fob_uid: o.fob_uid,
         })),

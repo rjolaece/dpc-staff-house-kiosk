@@ -21,7 +21,7 @@ const calculateDuration = (checkedInAt) => {
   return `${Math.floor(diffInMs / (1000 * 60 * 60 * 24))}d`;
 };
 
-// Formats timestamp to: "Sep 16, 2026 0811H"
+// Formats timestamp to: "Sep 16, 2026 0834H"
 const formatCheckInTime = (checkedInAt) => {
   if (!checkedInAt) return '';
   const date = parseLocalDate(checkedInAt);
@@ -92,7 +92,8 @@ export default function PhoneKiosk() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           key_fob_uid: fobUid,
-          staff_id: selectedStaff?.id,
+          staff_id: selectedStaff?.id || null,
+          guest_name: selectedStaff?.id ? null : selectedStaff?.full_name,
           room_id: selectedRoom?.id,
         }),
       });
@@ -207,10 +208,10 @@ export default function PhoneKiosk() {
         </div>
       )}
 
-      {/* STEP 1: SELECT STAFF */}
+      {/* STEP 1: SELECT STAFF OR GUEST */}
       {step === 'SELECT_STAFF' && (
         <div className="flex-1 my-3 flex flex-col">
-          <div className="mb-3 sticky top-0 z-10 pt-1">
+          <div className="mb-3 sticky top-0 z-10 pt-1 flex flex-col gap-2">
             <input
               type="text"
               placeholder="🔍 Search name..."
@@ -218,9 +219,32 @@ export default function PhoneKiosk() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white/5 border border-white/10 text-white placeholder-slate-400 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500/60"
             />
+
+            {/* AUTO-PREFIXED GUEST BUTTONS */}
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { label: '+ DPCC Guest', prefix: 'DPCC Guest: ' },
+                { label: '+ Visitor', prefix: 'Visitor: ' },
+                { label: '+ Contractor', prefix: 'Contractor: ' },
+              ].map((type) => (
+                <button
+                  key={type.label}
+                  onClick={() => {
+                    const name = prompt(`Enter ${type.label.replace('+', '').trim()} Name:`);
+                    if (name && name.trim()) {
+                      setSelectedStaff({ id: null, full_name: `${type.prefix}${name.trim()}` });
+                      setStep('SELECT_ROOM');
+                    }
+                  }}
+                  className="bg-indigo-600/60 hover:bg-indigo-500 border border-indigo-400/30 text-indigo-100 text-[10px] font-bold py-2 rounded-xl text-center active:scale-95 transition"
+                >
+                  {type.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 overflow-y-auto max-h-[40vh] pr-1">
+          <div className="grid grid-cols-1 gap-2 overflow-y-auto max-h-[35vh] pr-1">
             {filteredStaff.length > 0 ? (
               filteredStaff.map((s) => (
                 <button

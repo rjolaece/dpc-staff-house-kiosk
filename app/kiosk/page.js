@@ -228,27 +228,21 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH SMOOTH NEON PULSE */}
+        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH BACKGROUND-ONLY PULSE */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Overview</span>
             <span className="text-[10px] font-mono text-slate-500">8 Rooms Total</span>
           </div>
 
-          <div className="relative rounded-2xl flex-1 flex transition-all duration-500">
-            {/* AMBIENT SOFT PULSE BACKDROP */}
+          <div className="relative rounded-2xl flex-1 flex">
+            {/* ISOLATED BACKGROUND-ONLY PULSE (DOES NOT TOUCH ROOM TILES) */}
             {isRefreshing && (
-              <div className="absolute inset-0 rounded-2xl bg-blue-500/20 blur-xl animate-pulse" />
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-blue-600/30 via-cyan-500/20 to-indigo-600/30 blur-2xl animate-pulse pointer-events-none" />
             )}
 
-            {/* MAINTAINED DARK GLASSMORPHIC BACKGROUND WITH GLOWING PULSE BORDER */}
-            <div 
-              className={`grid grid-cols-4 gap-2.5 p-3 rounded-2xl border flex-1 items-stretch relative z-10 transition-all duration-500 bg-slate-950/85 backdrop-blur-xl ${
-                isRefreshing 
-                  ? 'border-cyan-400/80 ring-2 ring-blue-500/80 shadow-[0_0_35px_rgba(59,130,246,0.4)] animate-pulse' 
-                  : 'border-white/10 shadow-2xl ring-0'
-              }`}
-            >
+            {/* ROOM GRID CONTAINER */}
+            <div className="grid grid-cols-4 gap-2.5 p-3 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl bg-slate-950/80 flex-1 items-stretch relative z-10">
               {allRooms.slice(0, 8).map((room) => {
                 const isFull = room.status === 'FULL';
                 const isPartial = room.status === 'PARTIAL';
@@ -310,25 +304,19 @@ export default function PhoneKiosk() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL WITH SMOOTH NEON PULSE */}
+        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL WITH BACKGROUND-ONLY PULSE */}
         <div className="flex flex-col h-full">
           
           {/* STEP 1: SELECT STAFF OR GUEST */}
           {step === 'SELECT_STAFF' && (
-            <div className="relative rounded-2xl h-full flex transition-all duration-500">
-              {/* AMBIENT SOFT PULSE BACKDROP */}
+            <div className="relative rounded-2xl h-full flex">
+              {/* ISOLATED BACKGROUND-ONLY PULSE (DOES NOT TOUCH STAFF PANEL TILES) */}
               {isRefreshing && (
-                <div className="absolute inset-0 rounded-2xl bg-blue-500/20 blur-xl animate-pulse" />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-blue-600/30 via-cyan-500/20 to-indigo-600/30 blur-2xl animate-pulse pointer-events-none" />
               )}
 
-              {/* MAINTAINED DARK GLASSMORPHIC BACKGROUND WITH GLOWING PULSE BORDER */}
-              <div 
-                className={`flex-1 flex flex-col p-4 rounded-2xl border h-full relative z-10 transition-all duration-500 bg-slate-950/85 backdrop-blur-xl ${
-                  isRefreshing 
-                    ? 'border-cyan-400/80 ring-2 ring-blue-500/80 shadow-[0_0_35px_rgba(59,130,246,0.4)] animate-pulse' 
-                    : 'border-white/10 shadow-2xl ring-0'
-                }`}
-              >
+              {/* INTERACTIVE PANEL CONTAINER */}
+              <div className="flex-1 flex flex-col p-4 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl bg-slate-950/80 h-full relative z-10">
                 
                 {/* Top Controls: Search & Guest Buttons */}
                 <div className="flex flex-col gap-2.5 mb-3">

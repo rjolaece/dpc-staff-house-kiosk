@@ -10,7 +10,6 @@ export async function POST(req) {
   try {
     const { key_fob_uid, persons, room_id, staff_id, guest_name } = await req.json();
 
-    // Check if room_id is provided
     if (!room_id) {
       return NextResponse.json({ error: 'Room selection is required.' }, { status: 400 });
     }
@@ -29,7 +28,7 @@ export async function POST(req) {
       checked_in_at: new Date().toISOString(),
     }));
 
-    // Perform bulk insertion into room_assignments
+    // Bulk insert into room_assignments
     const { data, error } = await supabase
       .from('room_assignments')
       .insert(insertPayload)

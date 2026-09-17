@@ -1,126 +1,43 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export async function POST(req) {
   try {
-    const { key_fob_uid, staff_id, guest_name, room_id } = await req.json();
+    const { key_fob_uid, persons, room_id, staff_id, guest_name } = await req.json();
 
-    if (!key_fob_uid) {
-      return NextResponse.json({ error: 'Key fob UID is required.' }, { status: 400 });
+    // Support single person fallback as well as persons array
+    const personList = Array.isArray(persons) && persons.length > 0 
+      ? persons 
+      : [{ staff_id, guest_name }];
+
+    if (!room_id) {
+      return NextResponse.json({ error: 'Room selection required.' }, { status: 400 });
     }
 
-    // -------------------------------------------------------------
-    // 1. CHECK-IN FLOW (Triggered when Staff/Guest & Room are selected)
-    // -------------------------------------------------------------
-    if ((staff_id || guest_name) && room_id) {
-      const { data: roomData, error: rErr } = await supabase
-        .from('rooms')
-        .select('*')
-        .eq('id', room_id)
-        .single();
+    // Bulk insert assignments
+    const insertPayload = personList.map((p) => ({
+      room_id,
+      staff_id: p.staff_id || null,
+      guest_name: p.guest_name || null,
+      key_fob_uid: key_fob_uid || 'SYSTEM_AUTO',
+      checked_in_at: new Date().toISOString(),
+    }));
 
-      if (rErr || !roomData) {
-        return NextResponse.json({ error: 'Room not found.' }, { status: 404 });
-      }
+    const { error } = await supabase.from('room_assignments').insert(insertPayload);
 
-      const maxCapacity = roomData.room_number === '201' ? 4 : 2;
-
-      const { count, error: cErr } = await supabase
-        .from('room_assignments')
-        .select('*', { count: 'exact', head: true })
-        .eq('room_id', room_id)
-        .is('check_out', null);
-
-      if (cErr) {
-        return NextResponse.json({ error: 'Error checking capacity.' }, { status: 500 });
-      }
-
-      if (count >= maxCapacity) {
-        return NextResponse.json(
-          { error: `Room ${roomData.room_number} is full (${maxCapacity}/${maxCapacity}).` },
-          { status: 400 }
-        );
-      }
-
-      // Check active stay only for permanent staff
-      if (staff_id) {
-        const { data: activeStaff } = await supabase
-          .from('room_assignments')
-          .select('id')
-          .eq('staff_id', staff_id)
-          .is('check_out', null)
-          .maybeSingle();
-
-        if (activeStaff) {
-          return NextResponse.json(
-            { error: 'This staff member is already checked into a room.' },
-            { status: 400 }
-          );
-        }
-      }
-
-      // Record NEW check-in (supports both permanent staff_id and guest_name)
-      const { error: insertErr } = await supabase
-        .from('room_assignments')
-        .insert([
-          {
-            staff_id: staff_id || null,
-            guest_name: staff_id ? null : guest_name,
-            room_id: room_id,
-            fob_uid: key_fob_uid,
-            check_in: new Date().toISOString(),
-          },
-        ]);
-
-      if (insertErr) {
-        return NextResponse.json({ error: insertErr.message }, { status: 500 });
-      }
-
-      return NextResponse.json({
-        action: 'CHECK_IN',
-        message: `✅ Check-in successful for Room ${roomData.room_number}!`,
-      });
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // -------------------------------------------------------------
-    // 2. CHECK-OUT FLOW (Matches fob_uid or assignment id)
-    // -------------------------------------------------------------
-    const { data: activeAssignments, error: findErr } = await supabase
-      .from('room_assignments')
-      .select('*, rooms(room_number), staff(full_name)')
-      .is('check_out', null);
-
-    if (findErr) {
-      return NextResponse.json({ error: findErr.message }, { status: 500 });
-    }
-
-    const existingAssignment = activeAssignments?.find(
-      (a) => a.fob_uid === key_fob_uid || a.id === key_fob_uid
-    );
-
-    if (existingAssignment) {
-      const occupantDisplayName = existingAssignment.staff?.full_name || existingAssignment.guest_name || 'Guest';
-
-      const { error: outErr } = await supabase
-        .from('room_assignments')
-        .update({ check_out: new Date().toISOString() })
-        .eq('id', existingAssignment.id);
-
-      if (outErr) {
-        return NextResponse.json({ error: outErr.message }, { status: 500 });
-      }
-
-      return NextResponse.json({
-        action: 'CHECK_OUT',
-        message: `✅ ${occupantDisplayName} checked out of Room ${existingAssignment.rooms?.room_number}!`,
-      });
-    }
-
-    return NextResponse.json(
-      { error: 'Key fob is not assigned to any active room check-in.' },
-      { status: 400 }
-    );
+    return NextResponse.json({
+      message: `Successfully checked in ${personList.length} person(s)!`,
+    });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to process check-in.' }, { status: 500 });
   }
 }

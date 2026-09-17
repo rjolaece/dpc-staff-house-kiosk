@@ -88,7 +88,6 @@ export default function PhoneKiosk() {
     } catch (err) {
       setErrorMsg('Failed to load initial data.');
     } finally {
-      // 4000ms duration for sustained background glow
       setTimeout(() => setIsRefreshing(false), 4000);
     }
   };
@@ -176,10 +175,38 @@ export default function PhoneKiosk() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-6 font-sans flex flex-col justify-between max-w-md md:max-w-4xl lg:max-w-7xl mx-auto">
       
-      {/* HEADER SECTION */}
-      <div className="py-2 border-b border-white/10 flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-3 truncate">
-          <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider whitespace-nowrap truncate">
+      {/* INLINE CUSTOM KEYFRAME STYLES FOR PORTRAIT MARQUEE */}
+      <style jsx global>{`
+        @keyframes marqueeLoop {
+          0% { transform: translateX(0%); }
+          100% { transform: translateX(-100%); }
+        }
+        .animate-marquee-track {
+          display: flex;
+          width: max-content;
+          animation: marqueeLoop 12s linear infinite;
+          will-change: transform;
+        }
+      `}</style>
+
+      {/* HEADER SECTION WITH FIXED PORTRAIT CONTINUOUS MARQUEE & REFRESH BUTTON */}
+      <div className="py-2 border-b border-white/10 flex items-center justify-between gap-2 mb-2 overflow-hidden">
+        <div className="flex items-center gap-3 overflow-hidden flex-1 min-w-0">
+          
+          {/* PORTRAIT MODE CONTINUOUS LEFT SCROLLING TITLE */}
+          <div className="block lg:hidden overflow-hidden w-full whitespace-nowrap">
+            <div className="animate-marquee-track flex items-center">
+              <h1 className="text-base sm:text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider pr-8 shrink-0">
+                DPCC STAFF HOUSE MONITORING
+              </h1>
+              <h1 className="text-base sm:text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider pr-8 shrink-0">
+                DPCC STAFF HOUSE MONITORING
+              </h1>
+            </div>
+          </div>
+
+          {/* LANDSCAPE / DESKTOP STATIC SINGLE-LINE TITLE */}
+          <h1 className="hidden lg:block text-xl lg:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider whitespace-nowrap truncate">
             DPCC STAFF HOUSE MONITORING
           </h1>
 
@@ -188,7 +215,7 @@ export default function PhoneKiosk() {
             onClick={fetchInitialData}
             title="Refresh Data"
             disabled={isRefreshing}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all duration-500 backdrop-blur-md shadow-sm disabled:opacity-80 ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all duration-500 backdrop-blur-md shadow-sm shrink-0 disabled:opacity-80 ${
               isRefreshing 
                 ? 'bg-blue-600/30 border-cyan-400 text-cyan-300 ring-2 ring-blue-500/50' 
                 : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-blue-400/40 text-slate-300 hover:text-white active:scale-95'

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   BarChart,
   Bar,
@@ -23,8 +23,9 @@ export default function AnalyticsDashboard() {
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
 
+  // Global Units & Shared Period Filter States
   const [stayDurationUnit, setStayDurationUnit] = useState('hours');
-  const [filterType, setFilterType] = useState('overall');
+  const [filterType, setFilterType] = useState('overall'); // 'overall' | 'year' | 'month'
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
 
@@ -45,29 +46,179 @@ export default function AnalyticsDashboard() {
       });
   }, []);
 
-  // CSV Export Functionality
+  // Filter raw records dynamically for ALL 4 CHARTS based on the period filter
+  const filteredRecords = useMemo(() => {
+    if (!data?.rawAssignments) return [];
+
+    return data.rawAssignments.filter((a) => {
+      if (filterType === 'overall') return true;
+      if (filterType === 'year') return a.year === Number(selectedYear);
+      if (filterType === 'month') return a.year === Number(selectedYear) && a.month === Number(selectedMonth);
+      return true;
+    });
+  }, [data, filterType, selectedYear, selectedMonth]);
+
+  // 1. DYNAMIC AVERAGE STAY DURATION PER ROOM
+  const avgStayPerRoom = useMemo(() => {
+    if (!data?.rooms) return [];
+
+    const roomStayTotals = {};
+    const roomStayCounts = {};
+
+    filteredRecords.forEach((a) => {
+      const checkInTime = a.check_in || a.checked_in_at || a.created_at;
+      const checkOutTime = a.check_out;
+
+      if (checkInTime && checkOutTime) {
+        const roomNum = a.room_number;
+        const durationHours = (new Date(checkOutTime) - new Date(checkInTime)) / (1000 * 60 * 60);
+
+        if (durationHours > 0) {
+          roomStayTotals[roomNum] = (roomStayTotals[roomNum] || 0) + durationHours;
+          roomStayCounts[roomNum] = (roomStayCounts[roomNum] || 0) + 1;
+        }
+      }
+    });
+
+    return data.rooms.map((r) => {
+      const roomNum = r.room_number;
+      const totalHrs = roomStayTotals[roomNum] || 0;
+      const count = roomStayCounts[roomNum] || 0;
+      const avgHours = count > 0 ? parseFloat((totalHrs / count).toFixed(1)) : 0;
+      const avgDays = count > 0 ? parseFloat((totalHrs / (count * 24)).toFixed(1)) : 0;
+
+      return {
+        room: `R-${roomNum}`,
+        avgHours,
+        avgDays,
+      };
+    });
+  }, [data, filteredRecords]);
+
+  // 2. DYNAMIC TOP FREQUENT GUESTS
+  const topOccupantsData = useMemo(() => {
+    const counts = {};
+    filteredRecords.forEach((a) => {
+      counts[a.name] = (counts[a.name] || 0) + 1;
+    });
+
+    return Object.entries(counts)
+      .map(([name, checkIns]) => ({ name, checkIns }))
+      .sort((a, b) => b.checkIns - a.checkIns)
+      .slice(0, 5);
+  }, [filteredRecords]);
+
+  // 3. DYNAMIC PEAK CHECK-IN & CHECK-OUT HOURS
+  const peakHours = useMemo(() => {
+    const checkInHourCounts = Array(24).fill(0);
+    const checkOutHourCounts = Array(24).fill(0);
+
+    filteredRecords.forEach((a) => {
+      const checkInTime = a.check_in || a.checked_in_at || a.created_at;
+      if (checkInTime) {
+        const dIn = new Date(checkInTime);
+        if (!isNaN(dIn.getTime())) {
+          checkInHourCounts[dIn.getHours()] += 1;
+        }
+      }
+
+      if (a.check_out) {
+        const dOut = new Date(a.check_out);
+        if (!isNaN(dOut.getTime())) {
+          checkOutHourCounts[dOut.getHours()] += 1;
+        }
+      }
+    });
+
+    return checkInHourCounts.map((inCount, hr) => ({
+      hour: `${String(hr).padStart(2, '0')}:00`,
+      checkIns: inCount,
+      checkOuts: checkOutHourCounts[hr],
+    }));
+  }, [filteredRecords]);
+
+  // 4. DYNAMIC ROOM TURNOVER & OVERBOOKING FREQUENCY
+  const roomTurnoverAndOverbook = useMemo(() => {
+    if (!data?.rooms) return [];
+
+    const roomTurnover = {};
+    filteredRecords.forEach((a) => {
+      const roomNum = a.room_number;
+      if (roomNum) {
+        roomTurnover[roomNum] = (roomTurnover[roomNum] || 0) + 1;
+      }
+    });
+
+    return data.rooms.map((r) => {
+      const roomNum = r.room_number;
+      const maxCap = Number(r.max_capacity) || 2;
+
+      const roomAssignments = filteredRecords.filter(
+        (a) => String(a.room_id) === String(r.id) || String(a.room_number) === String(r.room_number)
+      );
+
+      const currentActiveCount = roomAssignments.filter((a) => {
+        const isCompleted = a.status && String(a.status).toUpperCase() === 'COMPLETED';
+        return !isCompleted && !a.check_out;
+      }).length;
+
+      const currentActiveOverbook = Math.max(0, currentActiveCount - maxCap);
+
+      let peakOverbookCount = 0;
+      roomAssignments.forEach((a) => {
+        const checkInTime = a.check_in || a.checked_in_at || a.created_at;
+        if (checkInTime) {
+          const tIn = new Date(checkInTime).getTime();
+
+          const activeAtTime = roomAssignments.filter((other) => {
+            const otInStr = other.check_in || other.checked_in_at || other.created_at;
+            if (!otInStr) return false;
+            const otIn = new Date(otInStr).getTime();
+            const otOut = other.check_out ? new Date(other.check_out).getTime() : Infinity;
+
+            return otIn <= tIn && otOut > tIn;
+          }).length;
+
+          if (activeAtTime > maxCap) {
+            const excess = activeAtTime - maxCap;
+            if (excess > peakOverbookCount) {
+              peakOverbookCount = excess;
+            }
+          }
+        }
+      });
+
+      const finalOverbooked = Math.max(currentActiveOverbook, peakOverbookCount);
+
+      return {
+        room: `R-${roomNum}`,
+        turnover: Number(roomTurnover[roomNum] || 0),
+        overbooked: Number(finalOverbooked),
+      };
+    });
+  }, [data, filteredRecords]);
+
+  // Export CSV for currently filtered records
   const downloadOverbookCSV = () => {
-    const rawLogs = data?.overbookRawLogs || [];
-    if (rawLogs.length === 0) {
-      alert('No overbooking raw data logs available to export.');
+    if (filteredRecords.length === 0) {
+      alert('No logs available for the selected filter.');
       return;
     }
 
-    const headers = ['Room Number', 'Capacity', 'Occupant Name', 'Check-In Timestamp', 'Check-Out Timestamp', 'Overbook Status'];
-    const rows = rawLogs.map((log) => [
-      `"${log.room_number}"`,
-      `"${log.capacity}"`,
-      `"${log.occupant_name}"`,
-      `"${log.check_in}"`,
-      `"${log.check_out}"`,
-      `"${log.is_overbook_excess}"`,
+    const headers = ['Room Number', 'Occupant Name', 'Check-In Timestamp', 'Check-Out Timestamp', 'Status'];
+    const rows = filteredRecords.map((log) => [
+      `"R-${log.room_number}"`,
+      `"${log.name}"`,
+      `"${log.check_in || log.created_at}"`,
+      `"${log.check_out || 'Active'}"`,
+      `"${log.status || 'ACTIVE'}"`,
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `DPCC_Overbooking_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `DPCC_Analytics_Report_${filterType}_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -80,29 +231,6 @@ export default function AnalyticsDashboard() {
       </div>
     );
   }
-
-  const getFilteredTopOccupants = () => {
-    if (!data?.processedAssignments) return [];
-
-    const filtered = data.processedAssignments.filter((a) => {
-      if (filterType === 'overall') return true;
-      if (filterType === 'year') return a.year === Number(selectedYear);
-      if (filterType === 'month') return a.year === Number(selectedYear) && a.month === Number(selectedMonth);
-      return true;
-    });
-
-    const counts = {};
-    filtered.forEach((a) => {
-      counts[a.name] = (counts[a.name] || 0) + 1;
-    });
-
-    return Object.entries(counts)
-      .map(([name, checkIns]) => ({ name, checkIns }))
-      .sort((a, b) => b.checkIns - a.checkIns)
-      .slice(0, 5);
-  };
-
-  const topOccupantsData = getFilteredTopOccupants();
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 p-3 sm:p-4 font-sans max-w-7xl mx-auto flex flex-col justify-between">
@@ -126,7 +254,7 @@ export default function AnalyticsDashboard() {
       {/* 2x2 FLEX GRID */}
       <div className="flex-1 min-h-0 my-2 grid grid-cols-1 lg:grid-cols-2 gap-3">
 
-        {/* 1. AVERAGE STAY DURATION */}
+        {/* 1. AVERAGE STAY DURATION PER ROOM */}
         <div className="bg-slate-900/80 border border-white/10 p-3 rounded-2xl backdrop-blur-xl flex flex-col min-h-0">
           <div className="flex justify-between items-center mb-2 shrink-0">
             <h2 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
@@ -153,9 +281,9 @@ export default function AnalyticsDashboard() {
           </div>
 
           <div className="flex-1 min-h-0 w-full relative">
-            {data?.avgStayPerRoom?.length > 0 ? (
+            {avgStayPerRoom.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.avgStayPerRoom} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <BarChart data={avgStayPerRoom} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                   <XAxis dataKey="room" stroke="#94a3b8" fontSize={10} />
                   <YAxis stroke="#94a3b8" fontSize={10} />
@@ -174,7 +302,7 @@ export default function AnalyticsDashboard() {
           </div>
         </div>
 
-        {/* 2. TOP OCCUPANTS */}
+        {/* 2. TOP FREQUENT GUESTS WITH SHARED PERIOD FILTER */}
         <div className="bg-slate-900/80 border border-white/10 p-3 rounded-2xl backdrop-blur-xl flex flex-col min-h-0">
           <div className="flex justify-between items-center mb-2 shrink-0 gap-1 flex-wrap">
             <h2 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
@@ -182,6 +310,7 @@ export default function AnalyticsDashboard() {
             </h2>
             
             <div className="flex items-center gap-1.5">
+              {/* Scope Selector (Controls ALL 4 Visualizations) */}
               <div className="flex bg-black/40 p-0.5 rounded-lg border border-white/10">
                 {['overall', 'year', 'month'].map((type) => (
                   <button
@@ -196,11 +325,12 @@ export default function AnalyticsDashboard() {
                 ))}
               </div>
 
+              {/* Specific Year Selector */}
               {filterType !== 'overall' && (
                 <select
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className="bg-slate-950 border border-white/10 text-slate-200 text-[9px] rounded-lg px-1.5 py-0.5 focus:outline-none"
+                  className="bg-slate-950 border border-white/10 text-slate-200 text-[9px] rounded-lg px-1.5 py-0.5 focus:outline-none font-semibold"
                 >
                   {(data?.availableYears || [new Date().getFullYear()]).map((y) => (
                     <option key={y} value={y}>{y}</option>
@@ -208,11 +338,12 @@ export default function AnalyticsDashboard() {
                 </select>
               )}
 
+              {/* Specific Month Selector */}
               {filterType === 'month' && (
                 <select
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                  className="bg-slate-950 border border-white/10 text-slate-200 text-[9px] rounded-lg px-1.5 py-0.5 focus:outline-none"
+                  className="bg-slate-950 border border-white/10 text-slate-200 text-[9px] rounded-lg px-1.5 py-0.5 focus:outline-none font-semibold"
                 >
                   {MONTH_NAMES.map((m, idx) => (
                     <option key={idx + 1} value={idx + 1}>{m.slice(0, 3)}</option>
@@ -234,7 +365,7 @@ export default function AnalyticsDashboard() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-full items-center justify-center text-[10px] text-slate-500 font-mono">No occupant records</div>
+              <div className="flex h-full items-center justify-center text-[10px] text-slate-500 font-mono">No occupant records for this period</div>
             )}
           </div>
         </div>
@@ -245,9 +376,9 @@ export default function AnalyticsDashboard() {
             📈 Peak Check-In & Check-Out Hours
           </h2>
           <div className="flex-1 min-h-0 w-full relative">
-            {data?.peakHours?.length > 0 ? (
+            {peakHours.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.peakHours} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <AreaChart data={peakHours} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                   <XAxis dataKey="hour" stroke="#94a3b8" fontSize={9} />
                   <YAxis stroke="#94a3b8" fontSize={10} />
@@ -263,7 +394,7 @@ export default function AnalyticsDashboard() {
           </div>
         </div>
 
-        {/* 4. OVERBOOKING & TURNOVER + EXPORT CSV BUTTON */}
+        {/* 4. OVERBOOKING & TURNOVER */}
         <div className="bg-slate-900/80 border border-white/10 p-3 rounded-2xl backdrop-blur-xl flex flex-col min-h-0">
           <div className="flex justify-between items-center mb-2 shrink-0">
             <h2 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
@@ -278,9 +409,9 @@ export default function AnalyticsDashboard() {
           </div>
 
           <div className="flex-1 min-h-0 w-full relative">
-            {data?.roomTurnoverAndOverbook?.length > 0 ? (
+            {roomTurnoverAndOverbook.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.roomTurnoverAndOverbook} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <BarChart data={roomTurnoverAndOverbook} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                   <XAxis dataKey="room" stroke="#94a3b8" fontSize={10} />
                   <YAxis stroke="#94a3b8" fontSize={10} />

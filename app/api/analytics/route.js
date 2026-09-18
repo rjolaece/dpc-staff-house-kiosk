@@ -118,7 +118,7 @@ export async function GET() {
       checkOuts: checkOutHourCounts[hr],
     }));
 
-    // 4. OVERBOOKING & TURNOVER FREQUENCY (TYPE-SAFE MATCHING)
+    // 4. OVERBOOKING & TURNOVER FREQUENCY + RAW LOG EXPORT DATA
     const roomTurnover = {};
     records.forEach((a) => {
       const roomObj = roomMap.get(String(a.room_id));
@@ -128,16 +128,16 @@ export async function GET() {
       }
     });
 
+    const overbookRawLogs = [];
+
     const roomTurnoverAndOverbook = (rooms || []).map((r) => {
       const roomNum = r.room_number;
       const maxCap = Number(r.max_capacity) || 2;
       
-      // Normalize comparison (String ID match)
       const roomAssignments = records.filter(
         (a) => String(a.room_id) === String(r.id) || String(a.room_number) === String(r.room_number)
       );
 
-      // A. Active Occupants Count (status IS NOT COMPLETED and check_out is null)
       const currentActiveCount = roomAssignments.filter((a) => {
         const isCompleted = a.status && String(a.status).toUpperCase() === 'COMPLETED';
         return !isCompleted && !a.check_out;
@@ -145,7 +145,6 @@ export async function GET() {
 
       const currentActiveOverbook = Math.max(0, currentActiveCount - maxCap);
 
-      // B. Historical Concurrency Overbook
       let peakOverbookCount = 0;
       roomAssignments.forEach((a) => {
         const checkInTime = a.check_in || a.checked_in_at || a.created_at;
@@ -166,6 +165,15 @@ export async function GET() {
             if (excess > peakOverbookCount) {
               peakOverbookCount = excess;
             }
+
+            overbookRawLogs.push({
+              room_number: `R-${roomNum}`,
+              capacity: maxCap,
+              occupant_name: a.guest_name || staffMap.get(String(a.staff_id)) || `Staff #${a.staff_id}`,
+              check_in: checkInTime,
+              check_out: a.check_out || 'Active (Still checked in)',
+              is_overbook_excess: activeAtTime > maxCap ? 'Yes (Exceeded Capacity)' : 'No',
+            });
           }
         }
       });
@@ -185,6 +193,7 @@ export async function GET() {
       availableYears,
       peakHours,
       roomTurnoverAndOverbook,
+      overbookRawLogs,
     });
   } catch (err) {
     console.error('Analytics API Error:', err);

@@ -23,13 +23,10 @@ export default function AnalyticsDashboard() {
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Toggle states
-  const [stayDurationUnit, setStayDurationUnit] = useState('hours'); // 'hours' | 'days'
-  
-  // Specific date filtering states for Top Occupants
-  const [filterType, setFilterType] = useState('overall'); // 'overall' | 'year' | 'month'
+  const [stayDurationUnit, setStayDurationUnit] = useState('hours');
+  const [filterType, setFilterType] = useState('overall');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-12
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
 
   useEffect(() => {
     setIsMounted(true);
@@ -48,6 +45,34 @@ export default function AnalyticsDashboard() {
       });
   }, []);
 
+  // CSV Export Functionality
+  const downloadOverbookCSV = () => {
+    const rawLogs = data?.overbookRawLogs || [];
+    if (rawLogs.length === 0) {
+      alert('No overbooking raw data logs available to export.');
+      return;
+    }
+
+    const headers = ['Room Number', 'Capacity', 'Occupant Name', 'Check-In Timestamp', 'Check-Out Timestamp', 'Overbook Status'];
+    const rows = rawLogs.map((log) => [
+      `"${log.room_number}"`,
+      `"${log.capacity}"`,
+      `"${log.occupant_name}"`,
+      `"${log.check_in}"`,
+      `"${log.check_out}"`,
+      `"${log.is_overbook_excess}"`,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `DPCC_Overbooking_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading || !isMounted) {
     return (
       <div className="h-screen w-screen bg-slate-950 text-slate-100 flex items-center justify-center font-mono">
@@ -56,7 +81,6 @@ export default function AnalyticsDashboard() {
     );
   }
 
-  // Calculate Top Occupants based on selected Year/Month filter
   const getFilteredTopOccupants = () => {
     if (!data?.processedAssignments) return [];
 
@@ -99,10 +123,10 @@ export default function AnalyticsDashboard() {
         </a>
       </div>
 
-      {/* 2x2 FLEX GRID FILLING REMAINING SCREEN HEIGHT */}
+      {/* 2x2 FLEX GRID */}
       <div className="flex-1 min-h-0 my-2 grid grid-cols-1 lg:grid-cols-2 gap-3">
 
-        {/* 1. AVERAGE STAY DURATION PER ROOM WITH TOGGLE */}
+        {/* 1. AVERAGE STAY DURATION */}
         <div className="bg-slate-900/80 border border-white/10 p-3 rounded-2xl backdrop-blur-xl flex flex-col min-h-0">
           <div className="flex justify-between items-center mb-2 shrink-0">
             <h2 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
@@ -112,9 +136,7 @@ export default function AnalyticsDashboard() {
               <button
                 onClick={() => setStayDurationUnit('hours')}
                 className={`px-2 py-0.5 text-[9px] font-semibold rounded-md transition ${
-                  stayDurationUnit === 'hours'
-                    ? 'bg-blue-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
+                  stayDurationUnit === 'hours' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Hours
@@ -122,9 +144,7 @@ export default function AnalyticsDashboard() {
               <button
                 onClick={() => setStayDurationUnit('days')}
                 className={`px-2 py-0.5 text-[9px] font-semibold rounded-md transition ${
-                  stayDurationUnit === 'days'
-                    ? 'bg-blue-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
+                  stayDurationUnit === 'days' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Days
@@ -139,9 +159,7 @@ export default function AnalyticsDashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                   <XAxis dataKey="room" stroke="#94a3b8" fontSize={10} />
                   <YAxis stroke="#94a3b8" fontSize={10} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '8px', fontSize: '11px' }}
-                  />
+                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '8px', fontSize: '11px' }} />
                   <Bar
                     dataKey={stayDurationUnit === 'hours' ? 'avgHours' : 'avgDays'}
                     fill="#38bdf8"
@@ -156,7 +174,7 @@ export default function AnalyticsDashboard() {
           </div>
         </div>
 
-        {/* 2. TOP OCCUPANTS WITH MONTH / YEAR / OVERALL SELECTORS */}
+        {/* 2. TOP OCCUPANTS */}
         <div className="bg-slate-900/80 border border-white/10 p-3 rounded-2xl backdrop-blur-xl flex flex-col min-h-0">
           <div className="flex justify-between items-center mb-2 shrink-0 gap-1 flex-wrap">
             <h2 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
@@ -164,16 +182,13 @@ export default function AnalyticsDashboard() {
             </h2>
             
             <div className="flex items-center gap-1.5">
-              {/* Scope Selector */}
               <div className="flex bg-black/40 p-0.5 rounded-lg border border-white/10">
                 {['overall', 'year', 'month'].map((type) => (
                   <button
                     key={type}
                     onClick={() => setFilterType(type)}
                     className={`px-2 py-0.5 text-[9px] font-semibold rounded-md transition capitalize ${
-                      filterType === type
-                        ? 'bg-indigo-600 text-white shadow'
-                        : 'text-slate-400 hover:text-white'
+                      filterType === type ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
                     }`}
                   >
                     {type}
@@ -181,7 +196,6 @@ export default function AnalyticsDashboard() {
                 ))}
               </div>
 
-              {/* Specific Year Selector */}
               {filterType !== 'overall' && (
                 <select
                   value={selectedYear}
@@ -194,7 +208,6 @@ export default function AnalyticsDashboard() {
                 </select>
               )}
 
-              {/* Specific Month Selector */}
               {filterType === 'month' && (
                 <select
                   value={selectedMonth}
@@ -216,19 +229,17 @@ export default function AnalyticsDashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                   <XAxis type="number" stroke="#94a3b8" fontSize={10} />
                   <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={10} width={100} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '8px', fontSize: '11px' }}
-                  />
+                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '8px', fontSize: '11px' }} />
                   <Bar dataKey="checkIns" fill="#818cf8" radius={[0, 4, 4, 0]} name="Check-Ins" />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-full items-center justify-center text-[10px] text-slate-500 font-mono">No occupant records for this selection</div>
+              <div className="flex h-full items-center justify-center text-[10px] text-slate-500 font-mono">No occupant records</div>
             )}
           </div>
         </div>
 
-        {/* 3. PEAK CHECK-IN & CHECK-OUT HOURS */}
+        {/* 3. PEAK HOURS */}
         <div className="bg-slate-900/80 border border-white/10 p-3 rounded-2xl backdrop-blur-xl flex flex-col min-h-0">
           <h2 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2 shrink-0">
             📈 Peak Check-In & Check-Out Hours
@@ -240,9 +251,7 @@ export default function AnalyticsDashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                   <XAxis dataKey="hour" stroke="#94a3b8" fontSize={9} />
                   <YAxis stroke="#94a3b8" fontSize={10} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '8px', fontSize: '11px' }}
-                  />
+                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '8px', fontSize: '11px' }} />
                   <Legend wrapperStyle={{ fontSize: '10px' }} />
                   <Area type="monotone" dataKey="checkIns" stroke="#34d399" fill="#34d39920" name="Check-Ins" />
                   <Area type="monotone" dataKey="checkOuts" stroke="#f59e0b" fill="#f59e0b20" name="Check-Outs" />
@@ -254,11 +263,20 @@ export default function AnalyticsDashboard() {
           </div>
         </div>
 
-        {/* 4. OVERBOOKING & TURNOVER FREQUENCY */}
+        {/* 4. OVERBOOKING & TURNOVER + EXPORT CSV BUTTON */}
         <div className="bg-slate-900/80 border border-white/10 p-3 rounded-2xl backdrop-blur-xl flex flex-col min-h-0">
-          <h2 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2 shrink-0">
-            🚨 Room Turnover & Overbooking Frequency
-          </h2>
+          <div className="flex justify-between items-center mb-2 shrink-0">
+            <h2 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+              🚨 Room Turnover & Overbooking Frequency
+            </h2>
+            <button
+              onClick={downloadOverbookCSV}
+              className="px-2 py-0.5 bg-rose-500/20 hover:bg-rose-500/40 border border-rose-500/40 text-rose-300 rounded-md text-[9px] font-semibold transition flex items-center gap-1 active:scale-95"
+            >
+              📥 Export CSV
+            </button>
+          </div>
+
           <div className="flex-1 min-h-0 w-full relative">
             {data?.roomTurnoverAndOverbook?.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -266,9 +284,7 @@ export default function AnalyticsDashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                   <XAxis dataKey="room" stroke="#94a3b8" fontSize={10} />
                   <YAxis stroke="#94a3b8" fontSize={10} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '8px', fontSize: '11px' }}
-                  />
+                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '8px', fontSize: '11px' }} />
                   <Legend wrapperStyle={{ fontSize: '10px' }} />
                   <Bar dataKey="turnover" fill="#60a5fa" radius={[3, 3, 0, 0]} name="Total Turnover" />
                   <Bar dataKey="overbooked" fill="#f87171" radius={[3, 3, 0, 0]} name="Overbook Events" />
@@ -282,13 +298,13 @@ export default function AnalyticsDashboard() {
 
       </div>
 
-{/* FOOTER SECTION: MATCHED FONT, COLOR, AND SIZE */}
-<div className="w-full border-t border-white/10 pt-2.5 pb-1 flex items-center justify-between text-[10px] md:text-xs text-slate-500 shrink-0">
-  <span className="font-medium tracking-wide">System Operational</span>
-  <span className="font-medium tracking-wide">
-    Developed by: rvo_045119
-  </span>
-</div>
+      {/* FOOTER */}
+      <div className="w-full border-t border-white/10 pt-2.5 pb-1 flex items-center justify-between text-[10px] md:text-xs text-slate-500 shrink-0">
+        <span className="font-medium tracking-wide">Analytics Engine Active</span>
+        <span className="font-medium tracking-wide">
+          Developed by: rvo_045119
+        </span>
+      </div>
     </div>
   );
 }

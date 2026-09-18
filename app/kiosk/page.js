@@ -81,12 +81,9 @@ export default function PhoneKiosk() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [rfidDetected, setRfidDetected] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const bufferRef = useRef('');
-  const lastKeyTimeRef = useRef(0);
-  const disconnectTimerRef = useRef(null);
 
   const fetchInitialData = async () => {
     setIsRefreshing(true);
@@ -110,23 +107,6 @@ export default function PhoneKiosk() {
 
   useEffect(() => {
     fetchInitialData();
-
-    if (typeof window !== 'undefined' && 'navigator' in window && 'hid' in navigator) {
-      navigator.hid.getDevices().then((devices) => {
-        setRfidDetected(devices.length > 0);
-      });
-
-      const handleConnect = () => setRfidDetected(true);
-      const handleDisconnect = () => setRfidDetected(false);
-
-      navigator.hid.addEventListener('connect', handleConnect);
-      navigator.hid.addEventListener('disconnect', handleDisconnect);
-
-      return () => {
-        navigator.hid.removeEventListener('connect', handleConnect);
-        navigator.hid.removeEventListener('disconnect', handleDisconnect);
-      };
-    }
   }, []);
 
   // Collect set of staff_ids and names currently checked into any room
@@ -207,19 +187,6 @@ export default function PhoneKiosk() {
     const handleKeyDown = (e) => {
       if (document.activeElement.tagName === 'INPUT') return;
 
-      const currentTime = Date.now();
-      const timeDiff = currentTime - lastKeyTimeRef.current;
-      lastKeyTimeRef.current = currentTime;
-
-      if (timeDiff > 0 && timeDiff < 50) {
-        setRfidDetected(true);
-
-        if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
-        disconnectTimerRef.current = setTimeout(() => {
-          setRfidDetected(false);
-        }, 10000);
-      }
-
       if (e.key === 'Enter') {
         const scannedCode = bufferRef.current.trim();
         if (scannedCode) handleFobScan(scannedCode);
@@ -232,7 +199,6 @@ export default function PhoneKiosk() {
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
     };
   }, [selectedPersons, selectedRoom]);
 
@@ -570,13 +536,6 @@ export default function PhoneKiosk() {
                 Tap key fob on scanner to assign <span className="text-amber-400 font-bold">{selectedPersons.length} occupant(s)</span>.
               </p>
 
-              <button
-                onClick={() => handleFobScan(`FOB_R${selectedRoom?.room_number}_${Date.now().toString().slice(-4)}`)}
-                className="mb-6 px-5 py-2.5 bg-amber-500/20 border border-amber-500/40 text-amber-300 rounded-xl text-xs font-mono hover:bg-amber-500/30 transition active:scale-95"
-              >
-                ⚡ Dev Sim: Tap New Fob for Room {selectedRoom?.room_number}
-              </button>
-
               <button onClick={() => resetKiosk(0)} className="text-xs text-slate-400 hover:text-white underline transition">
                 Cancel
               </button>
@@ -593,14 +552,11 @@ export default function PhoneKiosk() {
         </div>
       </div>
 
+      {/* FOOTER SECTION */}
       <div className="text-center text-[10px] md:text-xs text-slate-500 border-t border-white/10 pt-3 flex items-center justify-between mt-2">
         <span>System Operational</span>
-        <span className="font-mono flex items-center gap-1.5">
-          {rfidDetected ? (
-            <span className="text-emerald-400 font-semibold">RFID Scanner: Connected 🟢</span>
-          ) : (
-            <span className="text-slate-400 font-semibold">RFID Scanner: Disconnected 🔴</span>
-          )}
+        <span className="font-mono text-slate-400 font-semibold">
+          Developed by: RVO
         </span>
       </div>
     </div>

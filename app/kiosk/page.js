@@ -34,28 +34,37 @@ const formatCheckInTime = (checkedInAt) => {
   return `${month} ${day}, ${year} ${hours}${minutes}H`;
 };
 
-// Groups occupants strictly by check-in transaction (fob_uid or exact timestamp)
+// Groups room occupants strictly by key fob or check-in timestamp
 const groupOccupantsByTransaction = (occupants = []) => {
   if (!occupants || occupants.length === 0) return [];
 
   const groupsMap = new Map();
 
   occupants.forEach((occ) => {
-    // Unique group key per check-in transaction
-    const groupKey = occ.fob_uid || occ.checked_in_at || occ.assignment_id;
+    const rawTime = occ.checked_in_at || occ.check_in || occ.created_at || '';
+    // Truncate timestamp to minute precision (YYYY-MM-DDTHH:MM) to group bulk inserts
+    const timeKey = rawTime ? rawTime.substring(0, 16) : '';
+    const groupKey = occ.fob_uid || timeKey || occ.assignment_id || occ.id;
+
+    const displayName = occ.staff_name || occ.guest_name || occ.full_name || 'Occupant';
+    const assignmentId = occ.assignment_id || occ.id;
 
     if (!groupsMap.has(groupKey)) {
       groupsMap.set(groupKey, {
         groupKey,
-        fob_uid: occ.fob_uid || occ.assignment_id,
-        checked_in_at: occ.checked_in_at,
-        names: [occ.staff_name],
-        assignment_ids: [occ.assignment_id],
+        fob_uid: occ.fob_uid || 'SYSTEM_AUTO',
+        checked_in_at: rawTime,
+        names: [displayName],
+        assignment_ids: [assignmentId],
       });
     } else {
       const existing = groupsMap.get(groupKey);
-      existing.names.push(occ.staff_name);
-      existing.assignment_ids.push(occ.assignment_id);
+      if (displayName && !existing.names.includes(displayName)) {
+        existing.names.push(displayName);
+      }
+      if (assignmentId && !existing.assignment_ids.includes(assignmentId)) {
+        existing.assignment_ids.push(assignmentId);
+      }
     }
   });
 
@@ -121,18 +130,17 @@ export default function PhoneKiosk() {
     }
   }, []);
 
-  // Collect set of staff_ids and guest names currently checked into any room
   const activeOccupantSet = new Set();
   allRooms.forEach((r) => {
     if (r.occupants) {
       r.occupants.forEach((occ) => {
         if (occ.staff_id) activeOccupantSet.add(occ.staff_id);
-        if (occ.staff_name) activeOccupantSet.add(occ.staff_name.toLowerCase());
+        const name = occ.staff_name || occ.guest_name || occ.full_name;
+        if (name) activeOccupantSet.add(name.toLowerCase());
       });
     }
   });
 
-  // Check-in action handler
   const handleFobScan = async (fobUid) => {
     setErrorMsg('');
     try {
@@ -145,7 +153,7 @@ export default function PhoneKiosk() {
             staff_id: p.id || null,
             guest_name: p.id ? null : p.full_name,
           })),
-          room_id: selectedRoom?.id,
+          room_id: selectedRoom?.id || null,
         }),
       });
 
@@ -153,7 +161,7 @@ export default function PhoneKiosk() {
       const data = text ? JSON.parse(text) : {};
 
       if (!res.ok) {
-        setErrorMsg(data.error || 'Scan failed.');
+        setErrorMsg(data.error || 'Scan action failed.');
         return;
       }
 
@@ -166,7 +174,6 @@ export default function PhoneKiosk() {
     }
   };
 
-  // Dedicated direct check-out handler (does not require room_id)
   const handleCheckOut = async (assignmentIds, fobUid) => {
     setErrorMsg('');
     try {
@@ -316,7 +323,7 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH CONTINUOUS SMOOTH PULSE FOR OVERBOOKED ROOMS */}
+        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Overview</span>

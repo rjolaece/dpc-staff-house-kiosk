@@ -16,50 +16,76 @@ function getSupabaseClient() {
 export async function POST(req) {
   try {
     const supabase = getSupabaseClient();
-    const { key_fob_uid, persons, room_id, staff_id, guest_name } = await req.json();
+    const { key_fob_uid, assignment_ids, persons, room_id, staff_id, guest_name } = await req.json();
 
+    // ----------------------------------------------------
+    // BRANCH 1: CHECK-OUT BY EXPLICIT ASSIGNMENT IDS
+    // ----------------------------------------------------
+    if (Array.isArray(assignment_ids) && assignment_ids.length > 0) {
+      const { data, error } = await supabase
+        .from('room_assignments')
+        .update({
+          status: 'COMPLETED',
+          check_out: new Date().toISOString(),
+        })
+        .in('id', assignment_ids)
+        .select();
+
+      if (error) {
+        console.error('Checkout Error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        message: 'Successfully checked out!',
+        assignments: data,
+      });
+    }
+
+    // ----------------------------------------------------
+    // BRANCH 2: CHECK-OUT BY FOB SCAN (IF ACTIVE OCCUPANT)
+    // ----------------------------------------------------
+    if (key_fob_uid) {
+      const { data: activeAssignments } = await supabase
+        .from('room_assignments')
+        .select('id')
+        .eq('fob_uid', key_fob_uid)
+        .eq('status', 'ACTIVE')
+        .is('check_out', null);
+
+      if (activeAssignments && activeAssignments.length > 0) {
+        const activeIds = activeAssignments.map((a) => a.id);
+        const { data, error } = await supabase
+          .from('room_assignments')
+          .update({
+            status: 'COMPLETED',
+            check_out: new Date().toISOString(),
+          })
+          .in('id', activeIds)
+          .select();
+
+        if (error) {
+          return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        return NextResponse.json({
+          message: 'Successfully checked out active occupant(s)!',
+          assignments: data,
+        });
+      }
+    }
+
+    // ----------------------------------------------------
+    // BRANCH 3: CHECK-IN (REQUIRES ROOM SELECTION)
+    // ----------------------------------------------------
     if (!room_id) {
-      return NextResponse.json({ error: 'Room selection is required.' }, { status: 400 });
+      return NextResponse.json({ error: 'Room selection is required for check-in.' }, { status: 400 });
     }
 
     const personList = Array.isArray(persons) && persons.length > 0
       ? persons
       : [{ staff_id: staff_id || null, guest_name: guest_name || null }];
 
-    // 1. Fetch all current active room assignments
-    const { data: activeAssignments, error: activeErr } = await supabase
-      .from('room_assignments')
-      .select('staff_id, guest_name')
-      .eq('status', 'ACTIVE')
-      .is('check_out', null);
-
-    if (activeErr) {
-      console.error('Failed to fetch active assignments:', activeErr);
-    } else if (activeAssignments) {
-      // 2. Filter out persons who are already checked in
-      const alreadyCheckedIn = [];
-
-      personList.forEach((p) => {
-        const isAlreadyIn = activeAssignments.some((active) => {
-          if (p.staff_id && active.staff_id === p.staff_id) return true;
-          if (p.guest_name && active.guest_name?.toLowerCase() === p.guest_name.toLowerCase()) return true;
-          return false;
-        });
-
-        if (isAlreadyIn) {
-          alreadyCheckedIn.push(p.guest_name || 'Selected Staff');
-        }
-      });
-
-      if (alreadyCheckedIn.length > 0) {
-        return NextResponse.json(
-          { error: `Cannot check in: ${alreadyCheckedIn.join(', ')} is already checked into a room.` },
-          { status: 400 }
-        );
-      }
-    }
-
-    // 3. Map insert payload if all selected persons are eligible
     const insertPayload = personList.map((p) => ({
       room_id: room_id,
       staff_id: p.staff_id || null,
@@ -75,7 +101,7 @@ export async function POST(req) {
       .select();
 
     if (error) {
-      console.error('Supabase Insert Error:', error);
+      console.error('Checkin Error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -86,6 +112,6 @@ export async function POST(req) {
     });
   } catch (err) {
     console.error('Scan API Error:', err);
-    return NextResponse.json({ error: 'Failed to process check-in.' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to process request.' }, { status: 500 });
   }
 }

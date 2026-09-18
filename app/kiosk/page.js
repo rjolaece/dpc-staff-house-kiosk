@@ -566,13 +566,13 @@ export default function PhoneKiosk() {
         </div>
       </div>
 
-      {/* FOOTER SECTION */}
-      <div className="text-center text-[10px] md:text-xs text-slate-500 border-t border-white/10 pt-3 flex items-center justify-between mt-2 shrink-0">
-        <span>System Operational</span>
-        <span className="font-mono text-slate-400 font-semibold">
-          Developed by: rvo_045119
-        </span>
-      </div>
+{/* FOOTER SECTION: PERFECT SIDE-TO-SIDE ALIGNMENT */}
+<div className="w-full border-t border-white/10 pt-2.5 pb-1 flex items-center justify-between text-[10px] md:text-xs text-slate-500 shrink-0">
+  <span className="font-medium tracking-wide">System Operational</span>
+  <span className="font-mono text-slate-400 font-semibold tracking-wider">
+    Developed by: rvo_045119
+  </span>
+</div>
     </div>
   );
 }

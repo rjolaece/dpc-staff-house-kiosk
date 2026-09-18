@@ -21,7 +21,6 @@ const calculateDuration = (checkedInAt) => {
   return `${Math.floor(diffInMs / (1000 * 60 * 60 * 24))}d`;
 };
 
-// Formats timestamp to: "Sep 16, 2026 0834H"
 const formatCheckInTime = (checkedInAt) => {
   if (!checkedInAt) return '';
   const date = parseLocalDate(checkedInAt);
@@ -39,8 +38,10 @@ export default function PhoneKiosk() {
   const [step, setStep] = useState('SELECT_STAFF');
   const [staffList, setStaffList] = useState([]);
   const [allRooms, setAllRooms] = useState([]);
-  const [selectedStaff, setSelectedStaff] = useState(null);
+  
+  const [selectedPersons, setSelectedPersons] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -123,7 +124,21 @@ export default function PhoneKiosk() {
       window.removeEventListener('keydown', handleKeyDown);
       if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
     };
-  }, [selectedStaff, selectedRoom]);
+  }, [selectedPersons, selectedRoom]);
+
+  const toggleStaffSelection = (staff) => {
+    setSelectedPersons((prev) => {
+      const exists = prev.some((p) => p.id === staff.id && p.id !== null);
+      if (exists) {
+        return prev.filter((p) => p.id !== staff.id);
+      }
+      return [...prev, { id: staff.id, full_name: staff.full_name }];
+    });
+  };
+
+  const removePerson = (indexToRemove) => {
+    setSelectedPersons((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
 
   const handleFobScan = async (fobUid) => {
     setErrorMsg('');
@@ -133,8 +148,10 @@ export default function PhoneKiosk() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           key_fob_uid: fobUid,
-          staff_id: selectedStaff?.id || null,
-          guest_name: selectedStaff?.id ? null : selectedStaff?.full_name,
+          persons: selectedPersons.map((p) => ({
+            staff_id: p.id || null,
+            guest_name: p.id ? null : p.full_name,
+          })),
           room_id: selectedRoom?.id,
         }),
       });
@@ -158,7 +175,7 @@ export default function PhoneKiosk() {
   const resetKiosk = (delay = 0) => {
     setTimeout(() => {
       setStep('SELECT_STAFF');
-      setSelectedStaff(null);
+      setSelectedPersons([]);
       setSelectedRoom(null);
       setSearchQuery('');
       setStatusMsg('');
@@ -167,7 +184,10 @@ export default function PhoneKiosk() {
     }, delay);
   };
 
-  const availableRooms = allRooms.filter((r) => r.status !== 'FULL');
+  const availableRooms = allRooms.filter(
+    (r) => (r.max_capacity - r.occupant_count) >= (selectedPersons.length || 1)
+  );
+
   const filteredStaff = staffList.filter((s) =>
     (s.full_name || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -175,47 +195,18 @@ export default function PhoneKiosk() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-6 font-sans flex flex-col justify-between max-w-md md:max-w-4xl lg:max-w-7xl mx-auto">
       
-      {/* INLINE CUSTOM KEYFRAME STYLES FOR PORTRAIT MARQUEE */}
-      <style jsx global>{`
-        @keyframes marqueeLoop {
-          0% { transform: translateX(0%); }
-          100% { transform: translateX(-100%); }
-        }
-        .animate-marquee-track {
-          display: flex;
-          width: max-content;
-          animation: marqueeLoop 12s linear infinite;
-          will-change: transform;
-        }
-      `}</style>
-
-      {/* HEADER SECTION WITH FIXED PORTRAIT CONTINUOUS MARQUEE & REFRESH BUTTON */}
-      <div className="py-2 border-b border-white/10 flex items-center justify-between gap-2 mb-2 overflow-hidden">
-        <div className="flex items-center gap-3 overflow-hidden flex-1 min-w-0">
-          
-          {/* PORTRAIT MODE CONTINUOUS LEFT SCROLLING TITLE */}
-          <div className="block lg:hidden overflow-hidden w-full whitespace-nowrap">
-            <div className="animate-marquee-track flex items-center">
-              <h1 className="text-base sm:text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider pr-8 shrink-0">
-                DPCC STAFF HOUSE MONITORING
-              </h1>
-              <h1 className="text-base sm:text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider pr-8 shrink-0">
-                DPCC STAFF HOUSE MONITORING
-              </h1>
-            </div>
-          </div>
-
-          {/* LANDSCAPE / DESKTOP STATIC SINGLE-LINE TITLE */}
-          <h1 className="hidden lg:block text-xl lg:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider whitespace-nowrap truncate">
+      {/* HEADER SECTION */}
+      <div className="py-2 border-b border-white/10 flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-3 truncate">
+          <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 uppercase tracking-wider whitespace-nowrap truncate">
             DPCC STAFF HOUSE MONITORING
           </h1>
 
-          {/* REFRESH BUTTON */}
           <button
             onClick={fetchInitialData}
             title="Refresh Data"
             disabled={isRefreshing}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all duration-500 backdrop-blur-md shadow-sm shrink-0 disabled:opacity-80 ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all duration-500 backdrop-blur-md shadow-sm disabled:opacity-80 ${
               isRefreshing 
                 ? 'bg-blue-600/30 border-cyan-400 text-cyan-300 ring-2 ring-blue-500/50' 
                 : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-blue-400/40 text-slate-300 hover:text-white active:scale-95'
@@ -256,7 +247,7 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH SMOOTH BACKGROUND PULSE EXIT */}
+        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Overview</span>
@@ -264,7 +255,6 @@ export default function PhoneKiosk() {
           </div>
 
           <div className="relative rounded-2xl flex-1 flex">
-            {/* SMOOTH EXIT FADING BACKGROUND GLOW LAYER */}
             <div 
               className={`absolute inset-[-15px] rounded-3xl bg-gradient-to-r from-cyan-500/40 via-blue-600/50 to-indigo-500/40 blur-3xl pointer-events-none transition-all duration-1000 ease-out ${
                 isRefreshing 
@@ -273,7 +263,6 @@ export default function PhoneKiosk() {
               }`} 
             />
 
-            {/* ROOM GRID CONTAINER */}
             <div className="grid grid-cols-4 gap-2.5 p-3 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl bg-slate-950/80 flex-1 items-stretch relative z-10">
               {allRooms.slice(0, 8).map((room) => {
                 const isFull = room.status === 'FULL';
@@ -290,7 +279,6 @@ export default function PhoneKiosk() {
                         : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
                     }`}
                   >
-                    {/* Header: Room Number & Capacity Counter */}
                     <div className="flex items-center justify-between text-[11px] lg:text-xs font-black border-b border-white/10 pb-1.5">
                       <span>R-{room.room_number}</span>
                       <span className="font-mono text-[10px] opacity-80">
@@ -298,7 +286,6 @@ export default function PhoneKiosk() {
                       </span>
                     </div>
 
-                    {/* VERTICALLY ALIGNED OCCUPANTS CONTAINER */}
                     {room.occupants && room.occupants.length > 0 ? (
                       <div className="flex flex-col gap-1.5 my-auto overflow-auto max-h-[120px] lg:max-h-[145px] py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         {room.occupants.map((occ, idx) => (
@@ -336,13 +323,11 @@ export default function PhoneKiosk() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: UNIFIED INTERACTIVE PANEL WITH SMOOTH BACKGROUND PULSE EXIT */}
+        {/* RIGHT COLUMN: MULTI-PERSON INTERACTIVE PANEL */}
         <div className="flex flex-col h-full">
           
-          {/* STEP 1: SELECT STAFF OR GUEST */}
           {step === 'SELECT_STAFF' && (
             <div className="relative rounded-2xl h-full flex">
-              {/* SMOOTH EXIT FADING BACKGROUND GLOW LAYER */}
               <div 
                 className={`absolute inset-[-15px] rounded-3xl bg-gradient-to-r from-cyan-500/40 via-blue-600/50 to-indigo-500/40 blur-3xl pointer-events-none transition-all duration-1000 ease-out ${
                   isRefreshing 
@@ -351,20 +336,17 @@ export default function PhoneKiosk() {
                 }`} 
               />
 
-              {/* INTERACTIVE PANEL CONTAINER */}
-              <div className="flex-1 flex flex-col p-4 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl bg-slate-950/80 h-full relative z-10">
+              <div className="flex-1 flex flex-col p-4 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl bg-slate-950/80 h-full relative z-10 justify-between">
                 
-                {/* Top Controls: Search & Guest Buttons */}
                 <div className="flex flex-col gap-2.5 mb-3">
                   <input
                     type="text"
-                    placeholder="🔍 Search name..."
+                    placeholder="🔍 Search name to select..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full bg-slate-900/60 border border-white/10 text-white placeholder-slate-400 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500/60 transition shadow-inner"
                   />
 
-                  {/* Glassmorphic Guest Buttons */}
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { label: '+ DPCC Guest', prefix: 'DPCC Guest: ' },
@@ -376,8 +358,10 @@ export default function PhoneKiosk() {
                         onClick={() => {
                           const name = prompt(`Enter ${type.label.replace('+', '').trim()} Name:`);
                           if (name && name.trim()) {
-                            setSelectedStaff({ id: null, full_name: `${type.prefix}${name.trim()}` });
-                            setStep('SELECT_ROOM');
+                            setSelectedPersons((prev) => [
+                              ...prev,
+                              { id: null, full_name: `${type.prefix}${name.trim()}` },
+                            ]);
                           }
                         }}
                         className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/40 text-slate-300 hover:text-white text-[11px] font-semibold py-2.5 rounded-xl text-center active:scale-95 transition shadow-sm"
@@ -388,35 +372,72 @@ export default function PhoneKiosk() {
                   </div>
                 </div>
 
-                {/* Staff List */}
-                <div className="flex-1 grid grid-cols-1 gap-2 overflow-y-auto max-h-[360px] lg:max-h-[420px] pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {filteredStaff.length > 0 ? (
-                    filteredStaff.map((s) => (
-                      <button
-                        key={s.id}
-                        onClick={() => { setSelectedStaff(s); setStep('SELECT_ROOM'); }}
-                        className="w-full bg-white/5 hover:bg-blue-600/80 p-3.5 rounded-xl text-left font-medium text-sm md:text-base border border-white/10 flex items-center justify-between group transition-all active:scale-98"
-                      >
-                        <span className="flex items-center gap-2.5">
-                          <span className="p-1.5 rounded-lg bg-white/10 group-hover:bg-white/20">👤</span>
-                          {s.full_name}
+                {selectedPersons.length > 0 && (
+                  <div className="mb-3 p-2.5 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+                    <div className="text-[10px] uppercase font-bold text-blue-300 mb-1.5 flex justify-between items-center">
+                      <span>Selected Persons ({selectedPersons.length})</span>
+                      <button onClick={() => setSelectedPersons([])} className="text-rose-400 hover:underline">Clear All</button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto">
+                      {selectedPersons.map((p, idx) => (
+                        <span key={idx} className="bg-blue-600/60 text-white text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 border border-blue-400/40">
+                          <span>👤 {p.full_name}</span>
+                          <button onClick={() => removePerson(idx)} className="text-blue-200 hover:text-white font-bold ml-1">✕</button>
                         </span>
-                        <span className="text-slate-500 group-hover:text-white transition">→</span>
-                      </button>
-                    ))
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex-1 grid grid-cols-1 gap-2 overflow-y-auto max-h-[300px] lg:max-h-[360px] pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {filteredStaff.length > 0 ? (
+                    filteredStaff.map((s) => {
+                      const isSelected = selectedPersons.some((p) => p.id === s.id && p.id !== null);
+                      return (
+                        <button
+                          key={s.id}
+                          onClick={() => toggleStaffSelection(s)}
+                          className={`w-full p-3 rounded-xl text-left font-medium text-sm md:text-base border flex items-center justify-between transition-all active:scale-98 ${
+                            isSelected
+                              ? 'bg-blue-600/80 border-blue-400 text-white shadow-lg'
+                              : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <span className="p-1 rounded-lg bg-white/10">👤</span>
+                            {s.full_name}
+                          </span>
+                          <span className="text-xs font-mono px-2 py-0.5 rounded bg-black/30">
+                            {isSelected ? '✓ Selected' : '+ Add'}
+                          </span>
+                        </button>
+                      );
+                    })
                   ) : (
                     <p className="text-slate-500 text-xs text-center py-8">No staff members found.</p>
                   )}
                 </div>
+
+                <button
+                  onClick={() => setStep('SELECT_ROOM')}
+                  disabled={selectedPersons.length === 0}
+                  className="mt-3 w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl text-sm shadow-xl transition active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <span>Proceed to Select Room ({selectedPersons.length})</span>
+                  <span>→</span>
+                </button>
               </div>
             </div>
           )}
 
-          {/* STEP 2: SELECT ROOM */}
           {step === 'SELECT_ROOM' && (
             <div className="flex-1 flex flex-col justify-center text-center bg-white/5 p-6 rounded-2xl border border-white/10 backdrop-blur-xl shadow-2xl h-full">
-              <p className="text-blue-400 font-medium text-base mb-1">Welcome, {selectedStaff?.full_name}</p>
-              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Select an Available Room</h2>
+              <p className="text-blue-400 font-medium text-base mb-1">
+                Checking in: {selectedPersons.map((p) => p.full_name).join(', ')}
+              </p>
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">
+                Select an Available Room (Space required: {selectedPersons.length})
+              </h2>
               
               <div className="grid grid-cols-2 gap-4">
                 {availableRooms.map((r) => (
@@ -427,25 +448,24 @@ export default function PhoneKiosk() {
                   >
                     <div className="text-xl">Room {r.room_number}</div>
                     <div className="text-xs text-emerald-100 font-normal mt-1">
-                      Occupancy: {r.occupant_count}/{r.max_capacity}
+                      Available Space: {r.max_capacity - r.occupant_count} / {r.max_capacity}
                     </div>
                   </button>
                 ))}
               </div>
               
-              <button onClick={() => resetKiosk(0)} className="mt-8 text-xs text-slate-400 hover:text-white underline transition">
-                Cancel / Back
+              <button onClick={() => setStep('SELECT_STAFF')} className="mt-8 text-xs text-slate-400 hover:text-white underline transition">
+                Back to Person Selection
               </button>
             </div>
           )}
 
-          {/* STEP 3: SCAN KEY */}
           {step === 'SCAN_KEY' && (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-xl shadow-2xl h-full">
               <div className="animate-bounce text-5xl mb-4">🔑</div>
               <h2 className="text-xl font-bold text-white mb-2">Room {selectedRoom?.room_number} Selected</h2>
               <p className="text-sm text-slate-300 mb-6 max-w-xs">
-                Tap key fob on scanner to assign <span className="text-amber-400 font-bold">{selectedStaff?.full_name}</span>.
+                Tap key fob on scanner to assign <span className="text-amber-400 font-bold">{selectedPersons.length} occupant(s)</span>.
               </p>
 
               <button
@@ -461,7 +481,6 @@ export default function PhoneKiosk() {
             </div>
           )}
 
-          {/* STEP 4: SUCCESS */}
           {step === 'SUCCESS' && (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-emerald-500/10 rounded-2xl border border-emerald-500/40 backdrop-blur-xl shadow-2xl h-full">
               <div className="text-6xl mb-4">🎉</div>
@@ -472,7 +491,6 @@ export default function PhoneKiosk() {
         </div>
       </div>
 
-      {/* FOOTER WITH RFID SCANNER STATUS */}
       <div className="text-center text-[10px] md:text-xs text-slate-500 border-t border-white/10 pt-3 flex items-center justify-between mt-2">
         <span>System Operational</span>
         <span className="font-mono flex items-center gap-1.5">

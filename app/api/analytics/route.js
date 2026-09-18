@@ -118,7 +118,7 @@ export async function GET() {
       checkOuts: checkOutHourCounts[hr],
     }));
 
-    // 4. OVERBOOKING & TURNOVER FREQUENCY (FIXED CONCURRENCY ACCURACY)
+    // 4. OVERBOOKING & TURNOVER FREQUENCY (GUARANTEED CALCULATION)
     const roomTurnover = {};
     records.forEach((a) => {
       const roomObj = roomMap.get(a.room_id);
@@ -130,34 +130,40 @@ export async function GET() {
       const roomNum = r.room_number;
       const roomAssignments = records.filter((a) => a.room_id === r.id);
 
-      let overbookEvents = 0;
+      // A. Count currently active overbook excess occupants (e.g. 5 active in capacity 2 = 3 overbooked)
+      const currentActive = roomAssignments.filter((a) => a.status === 'ACTIVE' && !a.check_out).length;
+      const currentOverbookExcess = Math.max(0, currentActive - r.max_capacity);
 
-      // Group active/historical assignments to count peak overlap per transaction/timestamp
+      // B. Count total historical check-in occurrences where occupants exceeded capacity
+      let historicalOverbookEvents = 0;
+      
+      // Group check-ins by timestamp/transaction to check peak occupancy during each stay
+      const timeGroups = new Set();
       roomAssignments.forEach((a) => {
-        const checkInTime = a.check_in || a.checked_in_at || a.created_at;
-        if (checkInTime) {
-          const tIn = new Date(checkInTime).getTime();
+        const t = a.check_in || a.checked_in_at || a.created_at;
+        if (t) timeGroups.add(t);
+      });
 
-          // Count all occupants in the room at timestamp tIn
-          const activeOccupantsAtTime = roomAssignments.filter((other) => {
-            const otInStr = other.check_in || other.checked_in_at || other.created_at;
-            if (!otInStr) return false;
-            const otIn = new Date(otInStr).getTime();
-            const otOut = other.check_out ? new Date(other.check_out).getTime() : Infinity;
+      timeGroups.forEach((tStr) => {
+        const checkTime = new Date(tStr).getTime();
+        const concurrentAtTime = roomAssignments.filter((a) => {
+          const inTime = new Date(a.check_in || a.checked_in_at || a.created_at).getTime();
+          const outTime = a.check_out ? new Date(a.check_out).getTime() : Infinity;
+          return inTime <= checkTime && outTime > checkTime;
+        }).length;
 
-            return otIn <= tIn && otOut > tIn;
-          }).length;
-
-          if (activeOccupantsAtTime > r.max_capacity) {
-            overbookEvents++;
-          }
+        if (concurrentAtTime > r.max_capacity) {
+          historicalOverbookEvents += (concurrentAtTime - r.max_capacity);
         }
       });
+
+      // Take whichever overbook metric is higher (historical vs currently active)
+      const totalOverbooked = Math.max(currentOverbookExcess, historicalOverbookEvents);
 
       return {
         room: `R-${roomNum}`,
         turnover: roomTurnover[roomNum] || 0,
-        overbooked: overbookEvents,
+        overbooked: totalOverbooked,
       };
     });
 

@@ -34,7 +34,6 @@ const formatCheckInTime = (checkedInAt) => {
   return `${month} ${day}, ${year} ${hours}${minutes}H`;
 };
 
-// Groups room occupants sharing the same fob_uid or check_in timestamp
 const groupOccupantsByFob = (occupants = []) => {
   if (!occupants || occupants.length === 0) return [];
 
@@ -120,6 +119,17 @@ export default function PhoneKiosk() {
     }
   }, []);
 
+  // Set of staff_ids and names currently checked into any room
+  const activeOccupantSet = new Set();
+  allRooms.forEach((r) => {
+    if (r.occupants) {
+      r.occupants.forEach((occ) => {
+        if (occ.staff_id) activeOccupantSet.add(occ.staff_id);
+        if (occ.staff_name) activeOccupantSet.add(occ.staff_name.toLowerCase());
+      });
+    }
+  });
+
   const handleFobScan = async (fobUid) => {
     setErrorMsg('');
     try {
@@ -186,6 +196,8 @@ export default function PhoneKiosk() {
   }, [selectedPersons, selectedRoom]);
 
   const toggleStaffSelection = (staff) => {
+    if (activeOccupantSet.has(staff.id)) return; // Restrict already checked-in staff
+
     setSelectedPersons((prev) => {
       const exists = prev.some((p) => p.id === staff.id && p.id !== null);
       if (exists) {
@@ -270,7 +282,7 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH COMBINED GROUP OCCUPANTS */}
+        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Overview</span>
@@ -385,9 +397,14 @@ export default function PhoneKiosk() {
                         onClick={() => {
                           const name = prompt(`Enter ${type.label.replace('+', '').trim()} Name:`);
                           if (name && name.trim()) {
+                            const fullName = `${type.prefix}${name.trim()}`;
+                            if (activeOccupantSet.has(fullName.toLowerCase())) {
+                              setErrorMsg(`"${fullName}" is already checked into a room.`);
+                              return;
+                            }
                             setSelectedPersons((prev) => [
                               ...prev,
-                              { id: null, full_name: `${type.prefix}${name.trim()}` },
+                              { id: null, full_name: fullName },
                             ]);
                           }
                         }}
@@ -416,18 +433,24 @@ export default function PhoneKiosk() {
                   </div>
                 )}
 
+                {/* Staff List with Disable Logic for Active Occupants */}
                 <div className="flex-1 grid grid-cols-1 gap-2 overflow-y-auto max-h-[300px] lg:max-h-[360px] pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {filteredStaff.length > 0 ? (
                     filteredStaff.map((s) => {
                       const isSelected = selectedPersons.some((p) => p.id === s.id && p.id !== null);
+                      const isAlreadyCheckedIn = activeOccupantSet.has(s.id);
+
                       return (
                         <button
                           key={s.id}
+                          disabled={isAlreadyCheckedIn}
                           onClick={() => toggleStaffSelection(s)}
-                          className={`w-full p-3 rounded-xl text-left font-medium text-sm md:text-base border flex items-center justify-between transition-all active:scale-98 ${
-                            isSelected
-                              ? 'bg-blue-600/80 border-blue-400 text-white shadow-lg'
-                              : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200'
+                          className={`w-full p-3 rounded-xl text-left font-medium text-sm md:text-base border flex items-center justify-between transition-all ${
+                            isAlreadyCheckedIn
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300/60 cursor-not-allowed opacity-60'
+                              : isSelected
+                              ? 'bg-blue-600/80 border-blue-400 text-white shadow-lg active:scale-98'
+                              : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200 active:scale-98'
                           }`}
                         >
                           <span className="flex items-center gap-2.5">
@@ -435,7 +458,7 @@ export default function PhoneKiosk() {
                             {s.full_name}
                           </span>
                           <span className="text-xs font-mono px-2 py-0.5 rounded bg-black/30">
-                            {isSelected ? '✓ Selected' : '+ Add'}
+                            {isAlreadyCheckedIn ? 'Checked In 🟢' : isSelected ? '✓ Selected' : '+ Add'}
                           </span>
                         </button>
                       );
@@ -457,7 +480,6 @@ export default function PhoneKiosk() {
             </div>
           )}
 
-          {/* STEP 2: SELECT ROOM (ALL ROOMS REMAIN SELECTABLE, OVER-CAPACITY ROOMS ARE SEMI-TRANSPARENT) */}
           {step === 'SELECT_ROOM' && (
             <div className="flex-1 flex flex-col justify-center text-center bg-white/5 p-6 rounded-2xl border border-white/10 backdrop-blur-xl shadow-2xl h-full">
               <p className="text-blue-400 font-medium text-base mb-1">

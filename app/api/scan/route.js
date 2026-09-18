@@ -26,7 +26,40 @@ export async function POST(req) {
       ? persons
       : [{ staff_id: staff_id || null, guest_name: guest_name || null }];
 
-    // Map payload explicitly including required 'fob_uid'
+    // 1. Fetch all current active room assignments
+    const { data: activeAssignments, error: activeErr } = await supabase
+      .from('room_assignments')
+      .select('staff_id, guest_name')
+      .eq('status', 'ACTIVE')
+      .is('check_out', null);
+
+    if (activeErr) {
+      console.error('Failed to fetch active assignments:', activeErr);
+    } else if (activeAssignments) {
+      // 2. Filter out persons who are already checked in
+      const alreadyCheckedIn = [];
+
+      personList.forEach((p) => {
+        const isAlreadyIn = activeAssignments.some((active) => {
+          if (p.staff_id && active.staff_id === p.staff_id) return true;
+          if (p.guest_name && active.guest_name?.toLowerCase() === p.guest_name.toLowerCase()) return true;
+          return false;
+        });
+
+        if (isAlreadyIn) {
+          alreadyCheckedIn.push(p.guest_name || 'Selected Staff');
+        }
+      });
+
+      if (alreadyCheckedIn.length > 0) {
+        return NextResponse.json(
+          { error: `Cannot check in: ${alreadyCheckedIn.join(', ')} is already checked into a room.` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 3. Map insert payload if all selected persons are eligible
     const insertPayload = personList.map((p) => ({
       room_id: room_id,
       staff_id: p.staff_id || null,

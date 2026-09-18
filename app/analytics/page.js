@@ -166,7 +166,7 @@ export default function AnalyticsDashboard() {
       <div className="text-center text-[10px] text-slate-500 border-t border-white/10 pt-1.5 flex items-center justify-between shrink-0">
         <span>Analytics Engine Active</span>
         <span className="font-mono text-slate-400 font-semibold">
-          Developed by: RVO
+          Developed by: rvo_045119
         </span>
       </div>
     </div>

@@ -119,7 +119,6 @@ export default function PhoneKiosk() {
     }
   }, []);
 
-  // Set of staff_ids and names currently checked into any room
   const activeOccupantSet = new Set();
   allRooms.forEach((r) => {
     if (r.occupants) {
@@ -196,7 +195,7 @@ export default function PhoneKiosk() {
   }, [selectedPersons, selectedRoom]);
 
   const toggleStaffSelection = (staff) => {
-    if (activeOccupantSet.has(staff.id)) return; // Restrict already checked-in staff
+    if (activeOccupantSet.has(staff.id)) return;
 
     setSelectedPersons((prev) => {
       const exists = prev.some((p) => p.id === staff.id && p.id !== null);
@@ -282,7 +281,7 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY */}
+        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH CONTINUOUS SMOOTH PULSE FOR OVERBOOKED ROOMS */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Overview</span>
@@ -300,15 +299,18 @@ export default function PhoneKiosk() {
 
             <div className="grid grid-cols-4 gap-2.5 p-3 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl bg-slate-950/80 flex-1 items-stretch relative z-10">
               {allRooms.slice(0, 8).map((room) => {
-                const isFull = room.status === 'FULL';
-                const isPartial = room.status === 'PARTIAL';
+                const isOverbooked = room.occupant_count > room.max_capacity;
+                const isFull = room.status === 'FULL' || room.occupant_count >= room.max_capacity;
+                const isPartial = room.status === 'PARTIAL' && !isFull;
                 const groupedOccupants = groupOccupantsByFob(room.occupants);
 
                 return (
                   <div
                     key={room.id}
                     className={`p-2.5 rounded-xl text-center flex flex-col justify-between min-h-[130px] lg:min-h-[190px] border transition-all ${
-                      isFull
+                      isOverbooked
+                        ? 'bg-rose-500/20 border-rose-500 border-2 animate-pulse shadow-lg shadow-rose-500/20 text-rose-200 ring-1 ring-rose-500/50'
+                        : isFull
                         ? 'bg-rose-500/10 border-rose-500/40 text-rose-200'
                         : isPartial
                         ? 'bg-amber-500/10 border-amber-500/40 text-amber-200'
@@ -433,7 +435,6 @@ export default function PhoneKiosk() {
                   </div>
                 )}
 
-                {/* Staff List with Disable Logic for Active Occupants */}
                 <div className="flex-1 grid grid-cols-1 gap-2 overflow-y-auto max-h-[300px] lg:max-h-[360px] pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {filteredStaff.length > 0 ? (
                     filteredStaff.map((s) => {
@@ -480,6 +481,7 @@ export default function PhoneKiosk() {
             </div>
           )}
 
+          {/* STEP 2: SELECT ROOM (NEGATIVE VALUES FOR OVERBOOKED, RED BLENDED BORDER) */}
           {step === 'SELECT_ROOM' && (
             <div className="flex-1 flex flex-col justify-center text-center bg-white/5 p-6 rounded-2xl border border-white/10 backdrop-blur-xl shadow-2xl h-full">
               <p className="text-blue-400 font-medium text-base mb-1">
@@ -491,7 +493,7 @@ export default function PhoneKiosk() {
               
               <div className="grid grid-cols-2 gap-4 max-h-[380px] overflow-y-auto pr-1">
                 {allRooms.map((r) => {
-                  const availableSpace = Math.max(0, r.max_capacity - r.occupant_count);
+                  const availableSpace = r.max_capacity - r.occupant_count;
                   const isOverCapacity = availableSpace < selectedPersons.length;
 
                   return (
@@ -500,12 +502,12 @@ export default function PhoneKiosk() {
                       onClick={() => { setSelectedRoom(r); setStep('SCAN_KEY'); }}
                       className={`p-5 rounded-2xl text-left font-black border shadow-lg active:scale-95 transition ${
                         isOverCapacity
-                          ? 'bg-emerald-800/20 border-emerald-500/20 opacity-40 hover:opacity-80'
-                          : 'bg-emerald-600/90 hover:bg-emerald-500 border-emerald-400/40'
+                          ? 'bg-rose-950/30 border-rose-500/40 text-rose-200 opacity-60 hover:opacity-100 hover:border-rose-400'
+                          : 'bg-emerald-600/90 hover:bg-emerald-500 border-emerald-400/40 text-emerald-100'
                       }`}
                     >
                       <div className="text-xl">Room {r.room_number}</div>
-                      <div className="text-xs text-emerald-100 font-normal mt-1">
+                      <div className="text-xs opacity-90 font-normal mt-1">
                         Available Space: {availableSpace} / {r.max_capacity}
                       </div>
                     </button>

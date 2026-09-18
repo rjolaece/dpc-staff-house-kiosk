@@ -41,7 +41,6 @@ const groupOccupantsByFob = (occupants = []) => {
   const groupsMap = new Map();
 
   occupants.forEach((occ) => {
-    // Group key preference: fob_uid > truncated check_in timestamp > assignment_id
     const groupKey = occ.fob_uid || occ.checked_in_at?.substring(0, 16) || occ.assignment_id;
 
     if (!groupsMap.has(groupKey)) {
@@ -211,10 +210,6 @@ export default function PhoneKiosk() {
       bufferRef.current = '';
     }, delay);
   };
-
-  const availableRooms = allRooms.filter(
-    (r) => (r.max_capacity - r.occupant_count) >= (selectedPersons.length || 1)
-  );
 
   const filteredStaff = staffList.filter((s) =>
     (s.full_name || '').toLowerCase().includes(searchQuery.toLowerCase())
@@ -462,28 +457,38 @@ export default function PhoneKiosk() {
             </div>
           )}
 
+          {/* STEP 2: SELECT ROOM (ALL ROOMS REMAIN SELECTABLE, OVER-CAPACITY ROOMS ARE SEMI-TRANSPARENT) */}
           {step === 'SELECT_ROOM' && (
             <div className="flex-1 flex flex-col justify-center text-center bg-white/5 p-6 rounded-2xl border border-white/10 backdrop-blur-xl shadow-2xl h-full">
               <p className="text-blue-400 font-medium text-base mb-1">
                 Checking in: {selectedPersons.map((p) => p.full_name).join(', ')}
               </p>
               <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">
-                Select an Available Room (Space required: {selectedPersons.length})
+                Select a Room (Registering {selectedPersons.length} Person{selectedPersons.length > 1 ? 's' : ''})
               </h2>
               
-              <div className="grid grid-cols-2 gap-4">
-                {availableRooms.map((r) => (
-                  <button
-                    key={r.id}
-                    onClick={() => { setSelectedRoom(r); setStep('SCAN_KEY'); }}
-                    className="bg-emerald-600/90 hover:bg-emerald-500 p-5 rounded-2xl text-left font-black border border-emerald-400/40 shadow-lg active:scale-95 transition"
-                  >
-                    <div className="text-xl">Room {r.room_number}</div>
-                    <div className="text-xs text-emerald-100 font-normal mt-1">
-                      Available Space: {r.max_capacity - r.occupant_count} / {r.max_capacity}
-                    </div>
-                  </button>
-                ))}
+              <div className="grid grid-cols-2 gap-4 max-h-[380px] overflow-y-auto pr-1">
+                {allRooms.map((r) => {
+                  const availableSpace = Math.max(0, r.max_capacity - r.occupant_count);
+                  const isOverCapacity = availableSpace < selectedPersons.length;
+
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => { setSelectedRoom(r); setStep('SCAN_KEY'); }}
+                      className={`p-5 rounded-2xl text-left font-black border shadow-lg active:scale-95 transition ${
+                        isOverCapacity
+                          ? 'bg-emerald-800/20 border-emerald-500/20 opacity-40 hover:opacity-80'
+                          : 'bg-emerald-600/90 hover:bg-emerald-500 border-emerald-400/40'
+                      }`}
+                    >
+                      <div className="text-xl">Room {r.room_number}</div>
+                      <div className="text-xs text-emerald-100 font-normal mt-1">
+                        Available Space: {availableSpace} / {r.max_capacity}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
               
               <button onClick={() => setStep('SELECT_STAFF')} className="mt-8 text-xs text-slate-400 hover:text-white underline transition">

@@ -34,10 +34,10 @@ export async function GET() {
     }
 
     const roomMap = new Map();
-    (rooms || []).forEach((r) => roomMap.set(r.id, r));
+    (rooms || []).forEach((r) => roomMap.set(String(r.id), r));
 
     const staffMap = new Map();
-    (staffList || []).forEach((s) => staffMap.set(s.id, s.full_name));
+    (staffList || []).forEach((s) => staffMap.set(String(s.id), s.full_name));
 
     const records = assignments || [];
 
@@ -50,7 +50,7 @@ export async function GET() {
       const checkOutTime = a.check_out;
 
       if (checkInTime && checkOutTime) {
-        const roomObj = roomMap.get(a.room_id);
+        const roomObj = roomMap.get(String(a.room_id));
         const roomNum = roomObj ? roomObj.room_number : `${a.room_id}`;
         const durationHours = (new Date(checkOutTime) - new Date(checkInTime)) / (1000 * 60 * 60);
 
@@ -80,7 +80,7 @@ export async function GET() {
       const checkInTime = a.check_in || a.checked_in_at || a.created_at;
       const dateObj = checkInTime ? new Date(checkInTime) : null;
       return {
-        name: a.guest_name || staffMap.get(a.staff_id) || (a.staff_id ? `Staff #${a.staff_id}` : 'Guest'),
+        name: a.guest_name || staffMap.get(String(a.staff_id)) || (a.staff_id ? `Staff #${a.staff_id}` : 'Guest'),
         year: dateObj ? dateObj.getFullYear() : null,
         month: dateObj ? dateObj.getMonth() + 1 : null,
         dateStr: checkInTime,
@@ -118,52 +118,64 @@ export async function GET() {
       checkOuts: checkOutHourCounts[hr],
     }));
 
-    // 4. OVERBOOKING & TURNOVER FREQUENCY (GUARANTEED CALCULATION)
+    // 4. OVERBOOKING & TURNOVER FREQUENCY (TYPE-SAFE MATCHING)
     const roomTurnover = {};
     records.forEach((a) => {
-      const roomObj = roomMap.get(a.room_id);
+      const roomObj = roomMap.get(String(a.room_id));
       const roomNum = roomObj ? roomObj.room_number : `${a.room_id}`;
-      roomTurnover[roomNum] = (roomTurnover[roomNum] || 0) + 1;
+      if (roomNum) {
+        roomTurnover[roomNum] = (roomTurnover[roomNum] || 0) + 1;
+      }
     });
 
     const roomTurnoverAndOverbook = (rooms || []).map((r) => {
       const roomNum = r.room_number;
-      const roomAssignments = records.filter((a) => a.room_id === r.id);
-
-      // A. Count currently active overbook excess occupants (e.g. 5 active in capacity 2 = 3 overbooked)
-      const currentActive = roomAssignments.filter((a) => a.status === 'ACTIVE' && !a.check_out).length;
-      const currentOverbookExcess = Math.max(0, currentActive - r.max_capacity);
-
-      // B. Count total historical check-in occurrences where occupants exceeded capacity
-      let historicalOverbookEvents = 0;
+      const maxCap = Number(r.max_capacity) || 2;
       
-      // Group check-ins by timestamp/transaction to check peak occupancy during each stay
-      const timeGroups = new Set();
+      // Normalize comparison (String ID match)
+      const roomAssignments = records.filter(
+        (a) => String(a.room_id) === String(r.id) || String(a.room_number) === String(r.room_number)
+      );
+
+      // A. Active Occupants Count (status IS NOT COMPLETED and check_out is null)
+      const currentActiveCount = roomAssignments.filter((a) => {
+        const isCompleted = a.status && String(a.status).toUpperCase() === 'COMPLETED';
+        return !isCompleted && !a.check_out;
+      }).length;
+
+      const currentActiveOverbook = Math.max(0, currentActiveCount - maxCap);
+
+      // B. Historical Concurrency Overbook
+      let peakOverbookCount = 0;
       roomAssignments.forEach((a) => {
-        const t = a.check_in || a.checked_in_at || a.created_at;
-        if (t) timeGroups.add(t);
-      });
+        const checkInTime = a.check_in || a.checked_in_at || a.created_at;
+        if (checkInTime) {
+          const tIn = new Date(checkInTime).getTime();
 
-      timeGroups.forEach((tStr) => {
-        const checkTime = new Date(tStr).getTime();
-        const concurrentAtTime = roomAssignments.filter((a) => {
-          const inTime = new Date(a.check_in || a.checked_in_at || a.created_at).getTime();
-          const outTime = a.check_out ? new Date(a.check_out).getTime() : Infinity;
-          return inTime <= checkTime && outTime > checkTime;
-        }).length;
+          const activeAtTime = roomAssignments.filter((other) => {
+            const otInStr = other.check_in || other.checked_in_at || other.created_at;
+            if (!otInStr) return false;
+            const otIn = new Date(otInStr).getTime();
+            const otOut = other.check_out ? new Date(other.check_out).getTime() : Infinity;
 
-        if (concurrentAtTime > r.max_capacity) {
-          historicalOverbookEvents += (concurrentAtTime - r.max_capacity);
+            return otIn <= tIn && otOut > tIn;
+          }).length;
+
+          if (activeAtTime > maxCap) {
+            const excess = activeAtTime - maxCap;
+            if (excess > peakOverbookCount) {
+              peakOverbookCount = excess;
+            }
+          }
         }
       });
 
-      // Take whichever overbook metric is higher (historical vs currently active)
-      const totalOverbooked = Math.max(currentOverbookExcess, historicalOverbookEvents);
+      const finalOverbooked = Math.max(currentActiveOverbook, peakOverbookCount);
 
       return {
         room: `R-${roomNum}`,
-        turnover: roomTurnover[roomNum] || 0,
-        overbooked: totalOverbooked,
+        turnover: Number(roomTurnover[roomNum] || 0),
+        overbooked: Number(finalOverbooked),
       };
     });
 

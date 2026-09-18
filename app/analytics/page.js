@@ -282,13 +282,13 @@ export default function AnalyticsDashboard() {
 
       </div>
 
-      {/* FOOTER */}
-      <div className="text-center text-[10px] text-slate-500 border-t border-white/10 pt-1.5 flex items-center justify-between shrink-0">
-        <span>Analytics Engine Active</span>
-        <span className="font-mono text-slate-400 font-semibold">
-          Developed by: rvo_045119
-        </span>
-      </div>
+      {/* FOOTER SECTION: ALIGNED TO MARGIN EDGES */}
+<div className="w-full border-t border-white/10 pt-2.5 pb-1 flex items-center justify-between text-[10px] md:text-xs text-slate-500 shrink-0">
+  <span className="font-medium tracking-wide">Analytics Engine Active</span>
+  <span className="font-mono text-slate-400 font-semibold tracking-wider">
+    Developed by: rvo_045119
+  </span>
+</div>
     </div>
   );
 }

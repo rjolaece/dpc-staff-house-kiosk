@@ -426,23 +426,25 @@ export default function PhoneKiosk() {
                   </div>
                 </div>
 
-{selectedPersons.length > 0 && (
-  <div className="mb-3 p-2.5 bg-blue-600/20 rounded-xl backdrop-blur-md">
-    <div className="text-[10px] uppercase font-bold text-blue-300 mb-1.5 flex justify-between items-center">
-      <span>Selected Persons ({selectedPersons.length})</span>
-      <button onClick={() => setSelectedPersons([])} className="text-rose-400 hover:underline">Clear All</button>
-    </div>
-    <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto">
-      {selectedPersons.map((p, idx) => (
-        <span key={idx} className="bg-transparent text-white text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5">
-          <span>👤 {p.full_name}</span>
-          <button onClick={() => removePerson(idx)} className="text-blue-300 hover:text-white font-bold ml-1">✕</button>
-        </span>
-      ))}
-    </div>
-  </div>
-)}
+                {/* SELECTED PERSONS CONTAINER: TRANSPARENT FILL WITH MATCHING BLUE BORDER */}
+                {selectedPersons.length > 0 && (
+                  <div className="mb-3 p-2.5 bg-transparent border border-blue-600/40 rounded-xl">
+                    <div className="text-[10px] uppercase font-bold text-blue-300 mb-1.5 flex justify-between items-center">
+                      <span>Selected Persons ({selectedPersons.length})</span>
+                      <button onClick={() => setSelectedPersons([])} className="text-rose-400 hover:underline">Clear All</button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto">
+                      {selectedPersons.map((p, idx) => (
+                        <span key={idx} className="bg-transparent text-white text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                          <span>👤 {p.full_name}</span>
+                          <button onClick={() => removePerson(idx)} className="text-blue-300 hover:text-white font-bold ml-1">✕</button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
+                {/* STAFF LIST BUTTONS: TRANSPARENT FILL WITH BLUE BORDER WHEN SELECTED */}
                 <div className="flex-1 grid grid-cols-1 gap-2 overflow-y-auto max-h-[300px] lg:max-h-[360px] pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {filteredStaff.length > 0 ? (
                     filteredStaff.map((s) => {
@@ -450,28 +452,28 @@ export default function PhoneKiosk() {
                       const isAlreadyCheckedIn = activeOccupantSet.has(s.id);
 
                       return (
-<button
-  key={s.id}
-  disabled={isAlreadyCheckedIn}
-  onClick={() => toggleStaffSelection(s)}
-  className={`w-full p-3 rounded-xl text-left font-medium text-sm md:text-base flex items-center justify-between transition-all ${
-    isAlreadyCheckedIn
-      ? 'bg-emerald-500/10 text-emerald-300/60 cursor-not-allowed opacity-60'
-      : isSelected
-      ? 'bg-blue-600/20 text-blue-200 backdrop-blur-md active:scale-98'
-      : 'bg-white/5 hover:bg-white/10 text-slate-200 active:scale-98'
-  }`}
->
-  <span className="flex items-center gap-2.5">
-    <span className="p-1 rounded-lg bg-white/10">👤</span>
-    {s.full_name}
-  </span>
-  <span className={`text-xs font-mono px-2 py-0.5 ${
-    isSelected ? 'text-blue-300 font-semibold' : 'bg-black/30 text-slate-300 rounded'
-  }`}>
-    {isAlreadyCheckedIn ? 'Checked In 🟢' : isSelected ? '✓ Selected' : '+ Add'}
-  </span>
-</button>
+                        <button
+                          key={s.id}
+                          disabled={isAlreadyCheckedIn}
+                          onClick={() => toggleStaffSelection(s)}
+                          className={`w-full p-3 rounded-xl text-left font-medium text-sm md:text-base flex items-center justify-between transition-all ${
+                            isAlreadyCheckedIn
+                              ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300/60 cursor-not-allowed opacity-60'
+                              : isSelected
+                              ? 'bg-transparent border border-blue-600/40 text-blue-200 active:scale-98'
+                              : 'bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 active:scale-98'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <span className="p-1 rounded-lg bg-white/10">👤</span>
+                            {s.full_name}
+                          </span>
+                          <span className={`text-xs font-mono px-2 py-0.5 ${
+                            isSelected ? 'text-blue-300 font-semibold' : 'bg-black/30 text-slate-300 rounded'
+                          }`}>
+                            {isAlreadyCheckedIn ? 'Checked In 🟢' : isSelected ? '✓ Selected' : '+ Add'}
+                          </span>
+                        </button>
                       );
                     })
                   ) : (

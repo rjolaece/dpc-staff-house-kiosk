@@ -19,7 +19,7 @@ export async function POST(req) {
     const { key_fob_uid, assignment_ids, persons, room_id, staff_id, guest_name } = await req.json();
 
     // ----------------------------------------------------
-    // BRANCH 1: CHECK-OUT BY EXPLICIT ASSIGNMENT IDS
+    // BRANCH 1: CHECK-OUT VIA EXPLICIT ASSIGNMENT IDS
     // ----------------------------------------------------
     if (Array.isArray(assignment_ids) && assignment_ids.length > 0) {
       const { data, error } = await supabase
@@ -37,13 +37,50 @@ export async function POST(req) {
       }
 
       return NextResponse.json({
-        message: 'Successfully checked out!',
+        message: 'Successfully checked out group!',
         assignments: data,
       });
     }
 
     // ----------------------------------------------------
-    // BRANCH 2: CHECK-OUT BY FOB SCAN (IF ACTIVE OCCUPANT)
+    // BRANCH 2: CHECK-IN WITH SPECIFIC KEY FOB
+    // ----------------------------------------------------
+    if (room_id) {
+      const personList = Array.isArray(persons) && persons.length > 0
+        ? persons
+        : [{ staff_id: staff_id || null, guest_name: guest_name || null }];
+
+      // Generate a unique fob string if none provided (e.g. FOB_R101_1726650000)
+      const uniqueFob = key_fob_uid || `FOB_${room_id}_${Date.now()}`;
+
+      const insertPayload = personList.map((p) => ({
+        room_id: room_id,
+        staff_id: p.staff_id || null,
+        guest_name: p.guest_name || null,
+        fob_uid: uniqueFob,
+        status: 'ACTIVE',
+        check_in: new Date().toISOString(),
+      }));
+
+      const { data, error } = await supabase
+        .from('room_assignments')
+        .insert(insertPayload)
+        .select();
+
+      if (error) {
+        console.error('Checkin Error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      const count = personList.length;
+      return NextResponse.json({
+        message: `Successfully checked in ${count} person${count > 1 ? 's' : ''} with key fob ${uniqueFob}!`,
+        assignments: data,
+      });
+    }
+
+    // ----------------------------------------------------
+    // BRANCH 3: CHECK-OUT VIA FOB SCAN (SCANNING EXISTING FOB)
     // ----------------------------------------------------
     if (key_fob_uid) {
       const { data: activeAssignments } = await supabase
@@ -75,41 +112,7 @@ export async function POST(req) {
       }
     }
 
-    // ----------------------------------------------------
-    // BRANCH 3: CHECK-IN (REQUIRES ROOM SELECTION)
-    // ----------------------------------------------------
-    if (!room_id) {
-      return NextResponse.json({ error: 'Room selection is required for check-in.' }, { status: 400 });
-    }
-
-    const personList = Array.isArray(persons) && persons.length > 0
-      ? persons
-      : [{ staff_id: staff_id || null, guest_name: guest_name || null }];
-
-    const insertPayload = personList.map((p) => ({
-      room_id: room_id,
-      staff_id: p.staff_id || null,
-      guest_name: p.guest_name || null,
-      fob_uid: key_fob_uid || 'SYSTEM_AUTO',
-      status: 'ACTIVE',
-      check_in: new Date().toISOString(),
-    }));
-
-    const { data, error } = await supabase
-      .from('room_assignments')
-      .insert(insertPayload)
-      .select();
-
-    if (error) {
-      console.error('Checkin Error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    const count = personList.length;
-    return NextResponse.json({
-      message: `Successfully checked in ${count} person${count > 1 ? 's' : ''}!`,
-      assignments: data,
-    });
+    return NextResponse.json({ error: 'Room selection is required for check-in.' }, { status: 400 });
   } catch (err) {
     console.error('Scan API Error:', err);
     return NextResponse.json({ error: 'Failed to process request.' }, { status: 500 });

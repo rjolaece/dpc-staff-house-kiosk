@@ -426,8 +426,8 @@ export default function PhoneKiosk() {
                   </div>
                 </div>
 
- {selectedPersons.length > 0 && (
-  <div className="mb-3 p-2.5 bg-transparent border border-blue-500/40 rounded-xl">
+{selectedPersons.length > 0 && (
+  <div className="mb-3 p-2.5 bg-blue-600/20 rounded-xl backdrop-blur-md">
     <div className="text-[10px] uppercase font-bold text-blue-300 mb-1.5 flex justify-between items-center">
       <span>Selected Persons ({selectedPersons.length})</span>
       <button onClick={() => setSelectedPersons([])} className="text-rose-400 hover:underline">Clear All</button>

@@ -570,7 +570,7 @@ export default function PhoneKiosk() {
       <div className="text-center text-[10px] md:text-xs text-slate-500 border-t border-white/10 pt-3 flex items-center justify-between mt-2 shrink-0">
         <span>System Operational</span>
         <span className="font-mono text-slate-400 font-semibold">
-          Developed by: RVO
+          Developed by: rvo_045119
         </span>
       </div>
     </div>

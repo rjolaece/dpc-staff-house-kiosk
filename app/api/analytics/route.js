@@ -17,7 +17,6 @@ export async function GET() {
   try {
     const supabase = getSupabaseClient();
 
-    // Fetch assignments, rooms, and staff
     const { data: assignments, error: aErr } = await supabase
       .from('room_assignments')
       .select('*');
@@ -31,7 +30,6 @@ export async function GET() {
       .select('id, full_name');
 
     if (aErr || rErr) {
-      console.error('Analytics Query Error:', aErr || rErr);
       return NextResponse.json({ error: aErr?.message || rErr?.message }, { status: 500 });
     }
 
@@ -85,21 +83,31 @@ export async function GET() {
       .sort((a, b) => b.checkIns - a.checkIns)
       .slice(0, 5);
 
-    // 3. PEAK HOURS
-    const hourCounts = Array(24).fill(0);
+    // 3. PEAK CHECK-IN & CHECK-OUT HOURS OF THE DAY
+    const checkInHourCounts = Array(24).fill(0);
+    const checkOutHourCounts = Array(24).fill(0);
+
     records.forEach((a) => {
       const checkInTime = a.check_in || a.checked_in_at || a.created_at;
       if (checkInTime) {
-        const date = new Date(checkInTime);
-        if (!isNaN(date.getTime())) {
-          hourCounts[date.getHours()] += 1;
+        const dIn = new Date(checkInTime);
+        if (!isNaN(dIn.getTime())) {
+          checkInHourCounts[dIn.getHours()] += 1;
+        }
+      }
+
+      if (a.check_out) {
+        const dOut = new Date(a.check_out);
+        if (!isNaN(dOut.getTime())) {
+          checkOutHourCounts[dOut.getHours()] += 1;
         }
       }
     });
 
-    const peakHours = hourCounts.map((count, hr) => ({
+    const peakHours = checkInHourCounts.map((inCount, hr) => ({
       hour: `${String(hr).padStart(2, '0')}:00`,
-      checkIns: count,
+      checkIns: inCount,
+      checkOuts: checkOutHourCounts[hr],
     }));
 
     // 4. OVERBOOKING & TURNOVER FREQUENCY PER ROOM

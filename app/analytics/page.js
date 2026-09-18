@@ -110,10 +110,10 @@ export default function AnalyticsDashboard() {
           </div>
         </div>
 
-        {/* 3. PEAK USAGE HOURS */}
+        {/* 3. PEAK CHECK-IN & CHECK-OUT HOURS OF THE DAY */}
         <div className="bg-slate-900/80 border border-white/10 p-3 rounded-2xl backdrop-blur-xl flex flex-col min-h-0">
           <h2 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2 shrink-0">
-            📈 Peak Check-in Hours of the Day
+            📈 Peak Check-In & Check-Out Hours
           </h2>
           <div className="flex-1 min-h-0 w-full relative">
             {data?.peakHours?.length > 0 ? (
@@ -125,7 +125,9 @@ export default function AnalyticsDashboard() {
                   <Tooltip
                     contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '8px', fontSize: '11px' }}
                   />
+                  <Legend wrapperStyle={{ fontSize: '10px' }} />
                   <Area type="monotone" dataKey="checkIns" stroke="#34d399" fill="#34d39920" name="Check-Ins" />
+                  <Area type="monotone" dataKey="checkOuts" stroke="#f59e0b" fill="#f59e0b20" name="Check-Outs" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
@@ -166,7 +168,7 @@ export default function AnalyticsDashboard() {
       <div className="text-center text-[10px] text-slate-500 border-t border-white/10 pt-1.5 flex items-center justify-between shrink-0">
         <span>Analytics Engine Active</span>
         <span className="font-mono text-slate-400 font-semibold">
-          Developed by: rvo_045119
+          Developed by: RVO
         </span>
       </div>
     </div>

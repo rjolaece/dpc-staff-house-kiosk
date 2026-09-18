@@ -282,10 +282,10 @@ export default function AnalyticsDashboard() {
 
       </div>
 
-      {/* FOOTER SECTION: ALIGNED TO MARGIN EDGES */}
+{/* FOOTER SECTION: MATCHED FONT, COLOR, AND SIZE */}
 <div className="w-full border-t border-white/10 pt-2.5 pb-1 flex items-center justify-between text-[10px] md:text-xs text-slate-500 shrink-0">
-  <span className="font-medium tracking-wide">Analytics Engine Active</span>
-  <span className="font-mono text-slate-400 font-semibold tracking-wider">
+  <span className="font-medium tracking-wide">System Operational</span>
+  <span className="font-medium tracking-wide">
     Developed by: rvo_045119
   </span>
 </div>

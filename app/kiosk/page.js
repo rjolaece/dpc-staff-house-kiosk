@@ -566,10 +566,10 @@ export default function PhoneKiosk() {
         </div>
       </div>
 
-{/* FOOTER SECTION: PERFECT SIDE-TO-SIDE ALIGNMENT */}
+{/* FOOTER SECTION: MATCHED FONT, COLOR, AND SIZE */}
 <div className="w-full border-t border-white/10 pt-2.5 pb-1 flex items-center justify-between text-[10px] md:text-xs text-slate-500 shrink-0">
   <span className="font-medium tracking-wide">System Operational</span>
-  <span className="font-mono text-slate-400 font-semibold tracking-wider">
+  <span className="font-medium tracking-wide">
     Developed by: rvo_045119
   </span>
 </div>

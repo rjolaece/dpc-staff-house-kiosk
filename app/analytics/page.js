@@ -13,10 +13,23 @@ import {
   Legend,
 } from 'recharts';
 
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
 export default function AnalyticsDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Toggle states
+  const [stayDurationUnit, setStayDurationUnit] = useState('hours'); // 'hours' | 'days'
+  
+  // Specific date filtering states for Top Occupants
+  const [filterType, setFilterType] = useState('overall'); // 'overall' | 'year' | 'month'
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-12
 
   useEffect(() => {
     setIsMounted(true);
@@ -24,6 +37,9 @@ export default function AnalyticsDashboard() {
       .then((res) => res.json())
       .then((d) => {
         setData(d);
+        if (d.availableYears && d.availableYears.length > 0) {
+          setSelectedYear(d.availableYears[0]);
+        }
         setLoading(false);
       })
       .catch((err) => {
@@ -39,6 +55,30 @@ export default function AnalyticsDashboard() {
       </div>
     );
   }
+
+  // Calculate Top Occupants based on selected Year/Month filter
+  const getFilteredTopOccupants = () => {
+    if (!data?.processedAssignments) return [];
+
+    const filtered = data.processedAssignments.filter((a) => {
+      if (filterType === 'overall') return true;
+      if (filterType === 'year') return a.year === Number(selectedYear);
+      if (filterType === 'month') return a.year === Number(selectedYear) && a.month === Number(selectedMonth);
+      return true;
+    });
+
+    const counts = {};
+    filtered.forEach((a) => {
+      counts[a.name] = (counts[a.name] || 0) + 1;
+    });
+
+    return Object.entries(counts)
+      .map(([name, checkIns]) => ({ name, checkIns }))
+      .sort((a, b) => b.checkIns - a.checkIns)
+      .slice(0, 5);
+  };
+
+  const topOccupantsData = getFilteredTopOccupants();
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 p-3 sm:p-4 font-sans max-w-7xl mx-auto flex flex-col justify-between">
@@ -62,11 +102,36 @@ export default function AnalyticsDashboard() {
       {/* 2x2 FLEX GRID FILLING REMAINING SCREEN HEIGHT */}
       <div className="flex-1 min-h-0 my-2 grid grid-cols-1 lg:grid-cols-2 gap-3">
 
-        {/* 1. AVERAGE STAY DURATION PER ROOM */}
+        {/* 1. AVERAGE STAY DURATION PER ROOM WITH TOGGLE */}
         <div className="bg-slate-900/80 border border-white/10 p-3 rounded-2xl backdrop-blur-xl flex flex-col min-h-0">
-          <h2 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2 shrink-0">
-            ⏱️ Average Stay Duration per Room (Hours)
-          </h2>
+          <div className="flex justify-between items-center mb-2 shrink-0">
+            <h2 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+              ⏱️ Average Stay Duration per Room
+            </h2>
+            <div className="flex bg-black/40 p-0.5 rounded-lg border border-white/10">
+              <button
+                onClick={() => setStayDurationUnit('hours')}
+                className={`px-2 py-0.5 text-[9px] font-semibold rounded-md transition ${
+                  stayDurationUnit === 'hours'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Hours
+              </button>
+              <button
+                onClick={() => setStayDurationUnit('days')}
+                className={`px-2 py-0.5 text-[9px] font-semibold rounded-md transition ${
+                  stayDurationUnit === 'days'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Days
+              </button>
+            </div>
+          </div>
+
           <div className="flex-1 min-h-0 w-full relative">
             {data?.avgStayPerRoom?.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -77,7 +142,12 @@ export default function AnalyticsDashboard() {
                   <Tooltip
                     contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '8px', fontSize: '11px' }}
                   />
-                  <Bar dataKey="avgHours" fill="#38bdf8" radius={[4, 4, 0, 0]} name="Avg Stay (hrs)" />
+                  <Bar
+                    dataKey={stayDurationUnit === 'hours' ? 'avgHours' : 'avgDays'}
+                    fill="#38bdf8"
+                    radius={[4, 4, 0, 0]}
+                    name={stayDurationUnit === 'hours' ? 'Avg Stay (hrs)' : 'Avg Stay (days)'}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -86,15 +156,63 @@ export default function AnalyticsDashboard() {
           </div>
         </div>
 
-        {/* 2. TOP OCCUPANTS / FREQUENT GUESTS */}
+        {/* 2. TOP OCCUPANTS WITH MONTH / YEAR / OVERALL SELECTORS */}
         <div className="bg-slate-900/80 border border-white/10 p-3 rounded-2xl backdrop-blur-xl flex flex-col min-h-0">
-          <h2 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2 shrink-0">
-            👤 Top Frequent Guests / Staff
-          </h2>
+          <div className="flex justify-between items-center mb-2 shrink-0 gap-1 flex-wrap">
+            <h2 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+              👤 Top Frequent Guests / Staff
+            </h2>
+            
+            <div className="flex items-center gap-1.5">
+              {/* Scope Selector */}
+              <div className="flex bg-black/40 p-0.5 rounded-lg border border-white/10">
+                {['overall', 'year', 'month'].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setFilterType(type)}
+                    className={`px-2 py-0.5 text-[9px] font-semibold rounded-md transition capitalize ${
+                      filterType === type
+                        ? 'bg-indigo-600 text-white shadow'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+
+              {/* Specific Year Selector */}
+              {filterType !== 'overall' && (
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className="bg-slate-950 border border-white/10 text-slate-200 text-[9px] rounded-lg px-1.5 py-0.5 focus:outline-none"
+                >
+                  {(data?.availableYears || [new Date().getFullYear()]).map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              )}
+
+              {/* Specific Month Selector */}
+              {filterType === 'month' && (
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                  className="bg-slate-950 border border-white/10 text-slate-200 text-[9px] rounded-lg px-1.5 py-0.5 focus:outline-none"
+                >
+                  {MONTH_NAMES.map((m, idx) => (
+                    <option key={idx + 1} value={idx + 1}>{m.slice(0, 3)}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+
           <div className="flex-1 min-h-0 w-full relative">
-            {data?.topOccupants?.length > 0 ? (
+            {topOccupantsData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.topOccupants} layout="vertical" margin={{ top: 5, right: 5, left: 10, bottom: 0 }}>
+                <BarChart data={topOccupantsData} layout="vertical" margin={{ top: 5, right: 5, left: 10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                   <XAxis type="number" stroke="#94a3b8" fontSize={10} />
                   <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={10} width={100} />
@@ -105,12 +223,12 @@ export default function AnalyticsDashboard() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-full items-center justify-center text-[10px] text-slate-500 font-mono">No occupant history</div>
+              <div className="flex h-full items-center justify-center text-[10px] text-slate-500 font-mono">No occupant records for this selection</div>
             )}
           </div>
         </div>
 
-        {/* 3. PEAK CHECK-IN & CHECK-OUT HOURS OF THE DAY */}
+        {/* 3. PEAK CHECK-IN & CHECK-OUT HOURS */}
         <div className="bg-slate-900/80 border border-white/10 p-3 rounded-2xl backdrop-blur-xl flex flex-col min-h-0">
           <h2 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2 shrink-0">
             📈 Peak Check-In & Check-Out Hours

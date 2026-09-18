@@ -41,7 +41,7 @@ export async function GET() {
 
     const records = assignments || [];
 
-    // 1. AVERAGE STAY DURATION PER ROOM
+    // 1. AVERAGE STAY DURATION PER ROOM (HOURS & DAYS)
     const roomStayTotals = {};
     const roomStayCounts = {};
 
@@ -65,25 +65,34 @@ export async function GET() {
       const roomNum = r.room_number;
       const totalHrs = roomStayTotals[roomNum] || 0;
       const count = roomStayCounts[roomNum] || 0;
+      const avgHours = count > 0 ? parseFloat((totalHrs / count).toFixed(1)) : 0;
+      const avgDays = count > 0 ? parseFloat((totalHrs / (count * 24)).toFixed(1)) : 0;
+
       return {
         room: `R-${roomNum}`,
-        avgHours: count > 0 ? parseFloat((totalHrs / count).toFixed(1)) : 0,
+        avgHours,
+        avgDays,
       };
     });
 
-    // 2. TOP OCCUPANTS / FREQUENT GUESTS
-    const occupantCounts = {};
-    records.forEach((a) => {
-      const name = a.guest_name || staffMap.get(a.staff_id) || (a.staff_id ? `Staff #${a.staff_id}` : 'Guest');
-      occupantCounts[name] = (occupantCounts[name] || 0) + 1;
+    // 2. RAW RECORD ATTACHMENTS FOR FRONTEND DATE FILTERING
+    const processedAssignments = records.map((a) => {
+      const checkInTime = a.check_in || a.checked_in_at || a.created_at;
+      const dateObj = checkInTime ? new Date(checkInTime) : null;
+      return {
+        name: a.guest_name || staffMap.get(a.staff_id) || (a.staff_id ? `Staff #${a.staff_id}` : 'Guest'),
+        year: dateObj ? dateObj.getFullYear() : null,
+        month: dateObj ? dateObj.getMonth() + 1 : null, // 1 - 12
+        dateStr: checkInTime,
+      };
     });
 
-    const topOccupants = Object.entries(occupantCounts)
-      .map(([name, count]) => ({ name, checkIns: count }))
-      .sort((a, b) => b.checkIns - a.checkIns)
-      .slice(0, 5);
+    // Extract unique available years from DB
+    const availableYears = Array.from(
+      new Set(processedAssignments.map((a) => a.year).filter(Boolean))
+    ).sort((a, b) => b - a);
 
-    // 3. PEAK CHECK-IN & CHECK-OUT HOURS OF THE DAY
+    // 3. PEAK HOURS
     const checkInHourCounts = Array(24).fill(0);
     const checkOutHourCounts = Array(24).fill(0);
 
@@ -110,7 +119,7 @@ export async function GET() {
       checkOuts: checkOutHourCounts[hr],
     }));
 
-    // 4. OVERBOOKING & TURNOVER FREQUENCY PER ROOM
+    // 4. OVERBOOKING & TURNOVER
     const roomTurnover = {};
     records.forEach((a) => {
       const roomObj = roomMap.get(a.room_id);
@@ -151,7 +160,8 @@ export async function GET() {
 
     return NextResponse.json({
       avgStayPerRoom,
-      topOccupants,
+      processedAssignments,
+      availableYears,
       peakHours,
       roomTurnoverAndOverbook,
     });

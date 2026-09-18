@@ -454,20 +454,20 @@ export default function PhoneKiosk() {
   key={s.id}
   disabled={isAlreadyCheckedIn}
   onClick={() => toggleStaffSelection(s)}
-  className={`w-full p-3 rounded-xl text-left font-medium text-sm md:text-base border flex items-center justify-between transition-all ${
+  className={`w-full p-3 rounded-xl text-left font-medium text-sm md:text-base flex items-center justify-between transition-all ${
     isAlreadyCheckedIn
-      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300/60 cursor-not-allowed opacity-60'
+      ? 'bg-emerald-500/10 text-emerald-300/60 cursor-not-allowed opacity-60'
       : isSelected
-      ? 'bg-blue-500/20 border-blue-500/50 text-blue-200 shadow-md backdrop-blur-md active:scale-98'
-      : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200 active:scale-98'
+      ? 'bg-blue-600/20 text-blue-200 backdrop-blur-md active:scale-98'
+      : 'bg-white/5 hover:bg-white/10 text-slate-200 active:scale-98'
   }`}
 >
   <span className="flex items-center gap-2.5">
     <span className="p-1 rounded-lg bg-white/10">👤</span>
     {s.full_name}
   </span>
-  <span className={`text-xs font-mono px-2 py-0.5 rounded ${
-    isSelected ? 'bg-blue-500/30 text-blue-300 border border-blue-400/40' : 'bg-black/30 text-slate-300'
+  <span className={`text-xs font-mono px-2 py-0.5 ${
+    isSelected ? 'text-blue-300 font-semibold' : 'bg-black/30 text-slate-300 rounded'
   }`}>
     {isAlreadyCheckedIn ? 'Checked In 🟢' : isSelected ? '✓ Selected' : '+ Add'}
   </span>

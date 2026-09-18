@@ -426,22 +426,22 @@ export default function PhoneKiosk() {
                   </div>
                 </div>
 
-                {selectedPersons.length > 0 && (
-                  <div className="mb-3 p-2.5 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                    <div className="text-[10px] uppercase font-bold text-blue-300 mb-1.5 flex justify-between items-center">
-                      <span>Selected Persons ({selectedPersons.length})</span>
-                      <button onClick={() => setSelectedPersons([])} className="text-rose-400 hover:underline">Clear All</button>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto">
-                      {selectedPersons.map((p, idx) => (
-                        <span key={idx} className="bg-blue-600/60 text-white text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 border border-blue-400/40">
-                          <span>👤 {p.full_name}</span>
-                          <button onClick={() => removePerson(idx)} className="text-blue-200 hover:text-white font-bold ml-1">✕</button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+               {selectedPersons.length > 0 && (
+  <div className="mb-3 p-2.5 bg-transparent border border-blue-500/40 rounded-xl">
+    <div className="text-[10px] uppercase font-bold text-blue-300 mb-1.5 flex justify-between items-center">
+      <span>Selected Persons ({selectedPersons.length})</span>
+      <button onClick={() => setSelectedPersons([])} className="text-rose-400 hover:underline">Clear All</button>
+    </div>
+    <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto">
+      {selectedPersons.map((p, idx) => (
+        <span key={idx} className="bg-transparent text-white text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 border border-blue-400/50">
+          <span>👤 {p.full_name}</span>
+          <button onClick={() => removePerson(idx)} className="text-blue-300 hover:text-white font-bold ml-1">✕</button>
+        </span>
+      ))}
+    </div>
+  </div>
+)}
 
                 <div className="flex-1 grid grid-cols-1 gap-2 overflow-y-auto max-h-[300px] lg:max-h-[360px] pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {filteredStaff.length > 0 ? (

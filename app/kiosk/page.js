@@ -85,6 +85,16 @@ export default function PhoneKiosk() {
 
   const bufferRef = useRef('');
 
+  // Auto-clear error prompts after 5 seconds
+  useEffect(() => {
+    if (errorMsg) {
+      const timer = setTimeout(() => {
+        setErrorMsg('');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMsg]);
+
   const fetchInitialData = async () => {
     setIsRefreshing(true);
     try {
@@ -281,7 +291,7 @@ export default function PhoneKiosk() {
       </div>
 
       {errorMsg && (
-        <div className="bg-rose-500/10 border border-rose-500/40 text-rose-300 p-3 rounded-xl text-center text-xs my-2 backdrop-blur-md">
+        <div className="bg-rose-500/10 border border-rose-500/40 text-rose-300 p-3 rounded-xl text-center text-xs my-2 backdrop-blur-md transition-all duration-300">
           ⚠️ {errorMsg}
         </div>
       )}
@@ -426,7 +436,7 @@ export default function PhoneKiosk() {
                   </div>
                 </div>
 
-                {/* SELECTED PERSONS CONTAINER: TRANSPARENT FILL WITH MATCHING BLUE BORDER */}
+                {/* SELECTED PERSONS CONTAINER */}
                 {selectedPersons.length > 0 && (
                   <div className="mb-3 p-2.5 bg-transparent border border-blue-600/40 rounded-xl">
                     <div className="text-[10px] uppercase font-bold text-blue-300 mb-1.5 flex justify-between items-center">
@@ -444,7 +454,7 @@ export default function PhoneKiosk() {
                   </div>
                 )}
 
-                {/* STAFF LIST BUTTONS: TRANSPARENT FILL WITH BLUE BORDER WHEN SELECTED */}
+                {/* STAFF LIST BUTTONS: SUBTLE BLUE FILL WITH NO BORDER WHEN SELECTED */}
                 <div className="flex-1 grid grid-cols-1 gap-2 overflow-y-auto max-h-[300px] lg:max-h-[360px] pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {filteredStaff.length > 0 ? (
                     filteredStaff.map((s) => {
@@ -453,28 +463,27 @@ export default function PhoneKiosk() {
 
                       return (
                         <button
-  key={s.id}
-  disabled={isAlreadyCheckedIn}
-  onClick={() => toggleStaffSelection(s)}
-  className={`w-full p-3 rounded-xl text-left font-medium text-sm md:text-base flex items-center justify-between transition-all ${
-    isAlreadyCheckedIn
-      ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300/60 cursor-not-allowed opacity-60'
-      : isSelected
-      ? 'bg-blue-600/15 border-none text-blue-200 backdrop-blur-md active:scale-98'
-      : 'bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 active:scale-98'
-  }`}
->
-  <span className="flex items-center gap-2.5">
-    <span className="p-1 rounded-lg bg-white/10">👤</span>
-    {s.full_name}
-  </span>
-  <span className={`text-xs font-mono px-2 py-0.5 ${
-    isSelected ? 'text-blue-300 font-semibold' : 'bg-black/30 text-slate-300 rounded'
-  }`}>
-    {isAlreadyCheckedIn ? 'Checked In 🟢' : isSelected ? '✓ Selected' : '+ Add'}
-  </span>
-</button>
-                   
+                          key={s.id}
+                          disabled={isAlreadyCheckedIn}
+                          onClick={() => toggleStaffSelection(s)}
+                          className={`w-full p-3 rounded-xl text-left font-medium text-sm md:text-base flex items-center justify-between transition-all ${
+                            isAlreadyCheckedIn
+                              ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300/60 cursor-not-allowed opacity-60'
+                              : isSelected
+                              ? 'bg-blue-600/15 border-none text-blue-200 backdrop-blur-md active:scale-98'
+                              : 'bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 active:scale-98'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <span className="p-1 rounded-lg bg-white/10">👤</span>
+                            {s.full_name}
+                          </span>
+                          <span className={`text-xs font-mono px-2 py-0.5 ${
+                            isSelected ? 'text-blue-300 font-semibold' : 'bg-black/30 text-slate-300 rounded'
+                          }`}>
+                            {isAlreadyCheckedIn ? 'Checked In 🟢' : isSelected ? '✓ Selected' : '+ Add'}
+                          </span>
+                        </button>
                       );
                     })
                   ) : (

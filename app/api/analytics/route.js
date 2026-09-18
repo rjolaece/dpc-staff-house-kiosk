@@ -82,12 +82,11 @@ export async function GET() {
       return {
         name: a.guest_name || staffMap.get(a.staff_id) || (a.staff_id ? `Staff #${a.staff_id}` : 'Guest'),
         year: dateObj ? dateObj.getFullYear() : null,
-        month: dateObj ? dateObj.getMonth() + 1 : null, // 1 - 12
+        month: dateObj ? dateObj.getMonth() + 1 : null,
         dateStr: checkInTime,
       };
     });
 
-    // Extract unique available years from DB
     const availableYears = Array.from(
       new Set(processedAssignments.map((a) => a.year).filter(Boolean))
     ).sort((a, b) => b - a);
@@ -119,7 +118,7 @@ export async function GET() {
       checkOuts: checkOutHourCounts[hr],
     }));
 
-    // 4. OVERBOOKING & TURNOVER
+    // 4. OVERBOOKING & TURNOVER FREQUENCY (FIXED CONCURRENCY ACCURACY)
     const roomTurnover = {};
     records.forEach((a) => {
       const roomObj = roomMap.get(a.room_id);
@@ -132,20 +131,24 @@ export async function GET() {
       const roomAssignments = records.filter((a) => a.room_id === r.id);
 
       let overbookEvents = 0;
+
+      // Group active/historical assignments to count peak overlap per transaction/timestamp
       roomAssignments.forEach((a) => {
-        const t = a.check_in || a.checked_in_at || a.created_at;
-        if (t) {
-          const concurrent = roomAssignments.filter((other) => {
-            const otIn = other.check_in || other.checked_in_at || other.created_at;
-            const otOut = other.check_out;
-            return (
-              otIn &&
-              new Date(otIn) <= new Date(t) &&
-              (!otOut || new Date(otOut) > new Date(t))
-            );
+        const checkInTime = a.check_in || a.checked_in_at || a.created_at;
+        if (checkInTime) {
+          const tIn = new Date(checkInTime).getTime();
+
+          // Count all occupants in the room at timestamp tIn
+          const activeOccupantsAtTime = roomAssignments.filter((other) => {
+            const otInStr = other.check_in || other.checked_in_at || other.created_at;
+            if (!otInStr) return false;
+            const otIn = new Date(otInStr).getTime();
+            const otOut = other.check_out ? new Date(other.check_out).getTime() : Infinity;
+
+            return otIn <= tIn && otOut > tIn;
           }).length;
 
-          if (concurrent > r.max_capacity) {
+          if (activeOccupantsAtTime > r.max_capacity) {
             overbookEvents++;
           }
         }

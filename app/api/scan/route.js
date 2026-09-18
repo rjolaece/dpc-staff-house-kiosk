@@ -16,22 +16,22 @@ function getSupabaseClient() {
 export async function POST(req) {
   try {
     const supabase = getSupabaseClient();
-    const { persons, room_id, staff_id, guest_name } = await req.json();
+    const { key_fob_uid, persons, room_id, staff_id, guest_name } = await req.json();
 
     if (!room_id) {
       return NextResponse.json({ error: 'Room selection is required.' }, { status: 400 });
     }
 
-    // Support multi-person array or single-person fallback
     const personList = Array.isArray(persons) && persons.length > 0
       ? persons
       : [{ staff_id: staff_id || null, guest_name: guest_name || null }];
 
-    // Payload mapped strictly to confirmed columns: room_id, staff_id, guest_name, status, check_in
+    // Map payload explicitly including required 'fob_uid'
     const insertPayload = personList.map((p) => ({
       room_id: room_id,
       staff_id: p.staff_id || null,
       guest_name: p.guest_name || null,
+      fob_uid: key_fob_uid || 'SYSTEM_AUTO',
       status: 'ACTIVE',
       check_in: new Date().toISOString(),
     }));

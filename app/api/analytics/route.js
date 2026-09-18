@@ -30,6 +30,7 @@ export async function GET() {
       .select('id, full_name');
 
     if (aErr || rErr) {
+      console.error('Analytics Fetch Error:', aErr || rErr);
       return NextResponse.json({ error: aErr?.message || rErr?.message }, { status: 500 });
     }
 
@@ -41,162 +42,31 @@ export async function GET() {
 
     const records = assignments || [];
 
-    // 1. AVERAGE STAY DURATION PER ROOM (HOURS & DAYS)
-    const roomStayTotals = {};
-    const roomStayCounts = {};
-
-    records.forEach((a) => {
-      const checkInTime = a.check_in || a.checked_in_at || a.created_at;
-      const checkOutTime = a.check_out;
-
-      if (checkInTime && checkOutTime) {
-        const roomObj = roomMap.get(String(a.room_id));
-        const roomNum = roomObj ? roomObj.room_number : `${a.room_id}`;
-        const durationHours = (new Date(checkOutTime) - new Date(checkInTime)) / (1000 * 60 * 60);
-
-        if (durationHours > 0) {
-          roomStayTotals[roomNum] = (roomStayTotals[roomNum] || 0) + durationHours;
-          roomStayCounts[roomNum] = (roomStayCounts[roomNum] || 0) + 1;
-        }
-      }
-    });
-
-    const avgStayPerRoom = (rooms || []).map((r) => {
-      const roomNum = r.room_number;
-      const totalHrs = roomStayTotals[roomNum] || 0;
-      const count = roomStayCounts[roomNum] || 0;
-      const avgHours = count > 0 ? parseFloat((totalHrs / count).toFixed(1)) : 0;
-      const avgDays = count > 0 ? parseFloat((totalHrs / (count * 24)).toFixed(1)) : 0;
-
-      return {
-        room: `R-${roomNum}`,
-        avgHours,
-        avgDays,
-      };
-    });
-
-    // 2. RAW RECORD ATTACHMENTS FOR FRONTEND DATE FILTERING
-    const processedAssignments = records.map((a) => {
+    const rawAssignments = records.map((a) => {
       const checkInTime = a.check_in || a.checked_in_at || a.created_at;
       const dateObj = checkInTime ? new Date(checkInTime) : null;
+      const roomObj = roomMap.get(String(a.room_id));
+
       return {
+        ...a,
+        room_number: roomObj ? roomObj.room_number : (a.room_number || a.room_id),
         name: a.guest_name || staffMap.get(String(a.staff_id)) || (a.staff_id ? `Staff #${a.staff_id}` : 'Guest'),
-        year: dateObj ? dateObj.getFullYear() : null,
-        month: dateObj ? dateObj.getMonth() + 1 : null,
-        dateStr: checkInTime,
+        year: dateObj && !isNaN(dateObj.getTime()) ? dateObj.getFullYear() : null,
+        month: dateObj && !isNaN(dateObj.getTime()) ? dateObj.getMonth() + 1 : null,
       };
     });
 
     const availableYears = Array.from(
-      new Set(processedAssignments.map((a) => a.year).filter(Boolean))
+      new Set(rawAssignments.map((a) => a.year).filter(Boolean))
     ).sort((a, b) => b - a);
 
-    // 3. PEAK HOURS
-    const checkInHourCounts = Array(24).fill(0);
-    const checkOutHourCounts = Array(24).fill(0);
-
-    records.forEach((a) => {
-      const checkInTime = a.check_in || a.checked_in_at || a.created_at;
-      if (checkInTime) {
-        const dIn = new Date(checkInTime);
-        if (!isNaN(dIn.getTime())) {
-          checkInHourCounts[dIn.getHours()] += 1;
-        }
-      }
-
-      if (a.check_out) {
-        const dOut = new Date(a.check_out);
-        if (!isNaN(dOut.getTime())) {
-          checkOutHourCounts[dOut.getHours()] += 1;
-        }
-      }
-    });
-
-    const peakHours = checkInHourCounts.map((inCount, hr) => ({
-      hour: `${String(hr).padStart(2, '0')}:00`,
-      checkIns: inCount,
-      checkOuts: checkOutHourCounts[hr],
-    }));
-
-    // 4. OVERBOOKING & TURNOVER FREQUENCY + RAW LOG EXPORT DATA
-    const roomTurnover = {};
-    records.forEach((a) => {
-      const roomObj = roomMap.get(String(a.room_id));
-      const roomNum = roomObj ? roomObj.room_number : `${a.room_id}`;
-      if (roomNum) {
-        roomTurnover[roomNum] = (roomTurnover[roomNum] || 0) + 1;
-      }
-    });
-
-    const overbookRawLogs = [];
-
-    const roomTurnoverAndOverbook = (rooms || []).map((r) => {
-      const roomNum = r.room_number;
-      const maxCap = Number(r.max_capacity) || 2;
-      
-      const roomAssignments = records.filter(
-        (a) => String(a.room_id) === String(r.id) || String(a.room_number) === String(r.room_number)
-      );
-
-      const currentActiveCount = roomAssignments.filter((a) => {
-        const isCompleted = a.status && String(a.status).toUpperCase() === 'COMPLETED';
-        return !isCompleted && !a.check_out;
-      }).length;
-
-      const currentActiveOverbook = Math.max(0, currentActiveCount - maxCap);
-
-      let peakOverbookCount = 0;
-      roomAssignments.forEach((a) => {
-        const checkInTime = a.check_in || a.checked_in_at || a.created_at;
-        if (checkInTime) {
-          const tIn = new Date(checkInTime).getTime();
-
-          const activeAtTime = roomAssignments.filter((other) => {
-            const otInStr = other.check_in || other.checked_in_at || other.created_at;
-            if (!otInStr) return false;
-            const otIn = new Date(otInStr).getTime();
-            const otOut = other.check_out ? new Date(other.check_out).getTime() : Infinity;
-
-            return otIn <= tIn && otOut > tIn;
-          }).length;
-
-          if (activeAtTime > maxCap) {
-            const excess = activeAtTime - maxCap;
-            if (excess > peakOverbookCount) {
-              peakOverbookCount = excess;
-            }
-
-            overbookRawLogs.push({
-              room_number: `R-${roomNum}`,
-              capacity: maxCap,
-              occupant_name: a.guest_name || staffMap.get(String(a.staff_id)) || `Staff #${a.staff_id}`,
-              check_in: checkInTime,
-              check_out: a.check_out || 'Active (Still checked in)',
-              is_overbook_excess: activeAtTime > maxCap ? 'Yes (Exceeded Capacity)' : 'No',
-            });
-          }
-        }
-      });
-
-      const finalOverbooked = Math.max(currentActiveOverbook, peakOverbookCount);
-
-      return {
-        room: `R-${roomNum}`,
-        turnover: Number(roomTurnover[roomNum] || 0),
-        overbooked: Number(finalOverbooked),
-      };
-    });
-
     return NextResponse.json({
-      avgStayPerRoom,
-      processedAssignments,
-      availableYears,
-      peakHours,
-      roomTurnoverAndOverbook,
-      overbookRawLogs,
+      rooms: rooms || [],
+      rawAssignments,
+      availableYears: availableYears.length > 0 ? availableYears : [new Date().getFullYear()],
     });
   } catch (err) {
-    console.error('Analytics API Error:', err);
+    console.error('Analytics API Uncaught Error:', err);
     return NextResponse.json({ error: 'Failed to generate analytics.' }, { status: 500 });
   }
 }

@@ -149,6 +149,8 @@ export default function AnalyticsDashboard() {
       }
     });
 
+    const allAssignments = data?.rawAssignments || [];
+
     return data.rooms.map((r) => {
       const roomNum = r.room_number;
       const maxCap = Number(r.max_capacity) || 2;
@@ -157,13 +159,16 @@ export default function AnalyticsDashboard() {
         (a) => String(a.room_id) === String(r.id) || String(a.room_number) === String(r.room_number)
       );
 
-      const currentActiveCount = roomAssignments.filter((a) => {
+      // Active Overbook Count for this room
+      const currentActiveCount = allAssignments.filter((a) => {
+        const isMatch = String(a.room_id) === String(r.id) || String(a.room_number) === String(r.room_number);
         const isCompleted = a.status && String(a.status).toUpperCase() === 'COMPLETED';
-        return !isCompleted && !a.check_out;
+        return isMatch && !isCompleted && !a.check_out;
       }).length;
 
       const currentActiveOverbook = Math.max(0, currentActiveCount - maxCap);
 
+      // Peak Historical Concurrency Overbook
       let peakOverbookCount = 0;
       roomAssignments.forEach((a) => {
         const checkInTime = a.check_in || a.checked_in_at || a.created_at;
@@ -310,7 +315,6 @@ export default function AnalyticsDashboard() {
             </h2>
             
             <div className="flex items-center gap-1.5">
-              {/* Scope Selector (Controls ALL 4 Visualizations) */}
               <div className="flex bg-black/40 p-0.5 rounded-lg border border-white/10">
                 {['overall', 'year', 'month'].map((type) => (
                   <button
@@ -325,7 +329,6 @@ export default function AnalyticsDashboard() {
                 ))}
               </div>
 
-              {/* Specific Year Selector */}
               {filterType !== 'overall' && (
                 <select
                   value={selectedYear}
@@ -338,7 +341,6 @@ export default function AnalyticsDashboard() {
                 </select>
               )}
 
-              {/* Specific Month Selector */}
               {filterType === 'month' && (
                 <select
                   value={selectedMonth}

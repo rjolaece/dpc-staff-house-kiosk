@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Prevent static evaluation at build time
 export const dynamic = 'force-dynamic';
 
 function getSupabaseClient() {
@@ -23,28 +22,43 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Room selection is required.' }, { status: 400 });
     }
 
+    // Lookup key_id from public.keys table using key_fob_uid if provided
+    let matchedKeyId = null;
+    if (key_fob_uid) {
+      const { data: keyRecord } = await supabase
+        .from('keys')
+        .select('id')
+        .eq('fob_uid', key_fob_uid)
+        .maybeSingle();
+
+      if (keyRecord) {
+        matchedKeyId = keyRecord.id;
+      }
+    }
+
     // Support multi-person array or single-person fallback
     const personList = Array.isArray(persons) && persons.length > 0
       ? persons
       : [{ staff_id: staff_id || null, guest_name: guest_name || null }];
 
-    // Prepare bulk insert payload
+    // Match exact Supabase room_assignments columns:
+    // (room_id, staff_id, guest_name, key_id, status, check_in)
     const insertPayload = personList.map((p) => ({
       room_id: room_id,
       staff_id: p.staff_id || null,
       guest_name: p.guest_name || null,
-      key_fob_uid: key_fob_uid || 'SYSTEM_AUTO',
-      checked_in_at: new Date().toISOString(),
+      key_id: matchedKeyId,
+      status: 'ACTIVE',
+      check_in: new Date().toISOString(),
     }));
 
-    // Perform bulk insertion
     const { data, error } = await supabase
       .from('room_assignments')
       .insert(insertPayload)
       .select();
 
     if (error) {
-      console.error('Supabase Error:', error);
+      console.error('Supabase Insert Error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 

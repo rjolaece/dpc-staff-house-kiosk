@@ -85,9 +85,9 @@ export default function PhoneKiosk() {
 
   const bufferRef = useRef('');
 
-  // Auto-clear error prompts after 5 seconds
+  // Auto-clear transient error prompts after 5 seconds, but persist initial data loading errors
   useEffect(() => {
-    if (errorMsg) {
+    if (errorMsg && errorMsg !== 'Failed to load initial data.') {
       const timer = setTimeout(() => {
         setErrorMsg('');
       }, 5000);
@@ -108,6 +108,9 @@ export default function PhoneKiosk() {
       const rRes = await fetch('/api/rooms');
       const rData = await rRes.json();
       setAllRooms(Array.isArray(rData) ? rData : []);
+
+      // Clear persistent initial data error once loading succeeds
+      setErrorMsg((prev) => (prev === 'Failed to load initial data.' ? '' : prev));
     } catch {
       setErrorMsg('Failed to load initial data.');
     } finally {
@@ -382,7 +385,7 @@ export default function PhoneKiosk() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: MULTI-PERSON INTERACTIVE PANEL (DYNAMIC FULL-PAGE VERTICAL FLEX FIT) */}
+        {/* RIGHT COLUMN: MULTI-PERSON INTERACTIVE PANEL */}
         <div className="flex flex-col h-full min-h-0">
           
           {step === 'SELECT_STAFF' && (
@@ -454,7 +457,7 @@ export default function PhoneKiosk() {
                   </div>
                 )}
 
-                {/* DYNAMIC SCROLLING STAFF LIST FILLING REMAINING PORTRAIT SPACE */}
+                {/* DYNAMIC SCROLLING STAFF LIST */}
                 <div className="flex-1 min-h-0 grid grid-cols-1 gap-2 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {filteredStaff.length > 0 ? (
                     filteredStaff.map((s) => {
@@ -566,13 +569,13 @@ export default function PhoneKiosk() {
         </div>
       </div>
 
-{/* FOOTER SECTION: MATCHED FONT, COLOR, AND SIZE */}
-<div className="w-full border-t border-white/10 pt-2.5 pb-1 flex items-center justify-between text-[10px] md:text-xs text-slate-500 shrink-0">
-  <span className="font-medium tracking-wide">System Operational</span>
-  <span className="font-medium tracking-wide">
-    Developed by: rvo_045119
-  </span>
-</div>
+      {/* FOOTER SECTION: MATCHED FONT, COLOR, AND SIZE */}
+      <div className="w-full border-t border-white/10 pt-2.5 pb-1 flex items-center justify-between text-[10px] md:text-xs text-slate-500 shrink-0">
+        <span className="font-medium tracking-wide">System Operational</span>
+        <span className="font-medium tracking-wide">
+          Developed by: rvo_045119
+        </span>
+      </div>
     </div>
   );
 }

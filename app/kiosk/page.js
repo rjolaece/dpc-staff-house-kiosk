@@ -34,6 +34,34 @@ const formatCheckInTime = (checkedInAt) => {
   return `${month} ${day}, ${year} ${hours}${minutes}H`;
 };
 
+// Groups room occupants sharing the same fob_uid or check_in timestamp
+const groupOccupantsByFob = (occupants = []) => {
+  if (!occupants || occupants.length === 0) return [];
+
+  const groupsMap = new Map();
+
+  occupants.forEach((occ) => {
+    // Group key preference: fob_uid > truncated check_in timestamp > assignment_id
+    const groupKey = occ.fob_uid || occ.checked_in_at?.substring(0, 16) || occ.assignment_id;
+
+    if (!groupsMap.has(groupKey)) {
+      groupsMap.set(groupKey, {
+        groupKey,
+        fob_uid: occ.fob_uid || occ.assignment_id,
+        checked_in_at: occ.checked_in_at,
+        names: [occ.staff_name],
+        assignment_ids: [occ.assignment_id],
+      });
+    } else {
+      const existing = groupsMap.get(groupKey);
+      existing.names.push(occ.staff_name);
+      existing.assignment_ids.push(occ.assignment_id);
+    }
+  });
+
+  return Array.from(groupsMap.values());
+};
+
 export default function PhoneKiosk() {
   const [step, setStep] = useState('SELECT_STAFF');
   const [staffList, setStaffList] = useState([]);
@@ -51,6 +79,26 @@ export default function PhoneKiosk() {
   const bufferRef = useRef('');
   const lastKeyTimeRef = useRef(0);
   const disconnectTimerRef = useRef(null);
+
+  const fetchInitialData = async () => {
+    setIsRefreshing(true);
+    try {
+      const sRes = await fetch('/api/staff');
+      const sData = await sRes.json();
+      const sortedStaff = (Array.isArray(sData) ? sData : []).sort((a, b) =>
+        (a.full_name || '').localeCompare(b.full_name || '')
+      );
+      setStaffList(sortedStaff);
+
+      const rRes = await fetch('/api/rooms');
+      const rData = await rRes.json();
+      setAllRooms(Array.isArray(rData) ? rData : []);
+    } catch {
+      setErrorMsg('Failed to load initial data.');
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 4000);
+    }
+  };
 
   useEffect(() => {
     fetchInitialData();
@@ -71,25 +119,37 @@ export default function PhoneKiosk() {
         navigator.hid.removeEventListener('disconnect', handleDisconnect);
       };
     }
-  }, [step]);
+  }, []);
 
-  const fetchInitialData = async () => {
-    setIsRefreshing(true);
+  const handleFobScan = async (fobUid) => {
+    setErrorMsg('');
     try {
-      const sRes = await fetch('/api/staff');
-      const sData = await sRes.json();
-      const sortedStaff = (Array.isArray(sData) ? sData : []).sort((a, b) =>
-        (a.full_name || '').localeCompare(b.full_name || '')
-      );
-      setStaffList(sortedStaff);
+      const res = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key_fob_uid: fobUid,
+          persons: selectedPersons.map((p) => ({
+            staff_id: p.id || null,
+            guest_name: p.id ? null : p.full_name,
+          })),
+          room_id: selectedRoom?.id,
+        }),
+      });
 
-      const rRes = await fetch('/api/rooms');
-      const rData = await rRes.json();
-      setAllRooms(Array.isArray(rData) ? rData : []);
-    } catch (err) {
-      setErrorMsg('Failed to load initial data.');
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 4000);
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Scan failed.');
+        return;
+      }
+
+      setStatusMsg(data.message || 'Action completed successfully!');
+      setStep('SUCCESS');
+      resetKiosk(3000);
+    } catch {
+      setErrorMsg('Failed to process scan.');
     }
   };
 
@@ -138,38 +198,6 @@ export default function PhoneKiosk() {
 
   const removePerson = (indexToRemove) => {
     setSelectedPersons((prev) => prev.filter((_, idx) => idx !== indexToRemove));
-  };
-
-  const handleFobScan = async (fobUid) => {
-    setErrorMsg('');
-    try {
-      const res = await fetch('/api/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key_fob_uid: fobUid,
-          persons: selectedPersons.map((p) => ({
-            staff_id: p.id || null,
-            guest_name: p.id ? null : p.full_name,
-          })),
-          room_id: selectedRoom?.id,
-        }),
-      });
-
-      const text = await res.text();
-      const data = text ? JSON.parse(text) : {};
-
-      if (!res.ok) {
-        setErrorMsg(data.error || 'Scan failed.');
-        return;
-      }
-
-      setStatusMsg(data.message || 'Action completed successfully!');
-      setStep('SUCCESS');
-      resetKiosk(3000);
-    } catch (err) {
-      setErrorMsg('Failed to process scan.');
-    }
   };
 
   const resetKiosk = (delay = 0) => {
@@ -247,7 +275,7 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY */}
+        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH COMBINED GROUP OCCUPANTS */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Overview</span>
@@ -267,6 +295,7 @@ export default function PhoneKiosk() {
               {allRooms.slice(0, 8).map((room) => {
                 const isFull = room.status === 'FULL';
                 const isPartial = room.status === 'PARTIAL';
+                const groupedOccupants = groupOccupantsByFob(room.occupants);
 
                 return (
                   <div
@@ -286,23 +315,26 @@ export default function PhoneKiosk() {
                       </span>
                     </div>
 
-                    {room.occupants && room.occupants.length > 0 ? (
+                    {groupedOccupants && groupedOccupants.length > 0 ? (
                       <div className="flex flex-col gap-1.5 my-auto overflow-auto max-h-[120px] lg:max-h-[145px] py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                        {room.occupants.map((occ, idx) => (
+                        {groupedOccupants.map((group, idx) => (
                           <div 
                             key={idx} 
-                            className="w-full bg-black/40 rounded-lg p-2 text-[8.5px] text-left leading-tight border border-white/5 shadow-inner flex flex-col justify-between shrink-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                            className="w-full bg-black/40 rounded-lg p-2 text-[8.5px] text-left leading-tight border border-white/5 shadow-inner flex flex-col justify-between shrink-0"
                           >
-                            <div className="font-bold whitespace-nowrap text-slate-100">👤 {occ.staff_name}</div>
+                            <div className="font-bold text-slate-100 leading-snug">
+                              {group.names.length > 1 ? '👥 ' : '👤 '}
+                              {group.names.join(', ')}
+                            </div>
                             
                             <div className="text-[7px] text-slate-400 font-mono mt-1 whitespace-nowrap">
-                              {formatCheckInTime(occ.checked_in_at)}
+                              {formatCheckInTime(group.checked_in_at)}
                             </div>
 
                             <div className="flex justify-between items-center text-amber-400 font-mono text-[7.5px] mt-1.5 whitespace-nowrap">
-                              <span>{calculateDuration(occ.checked_in_at)}</span>
+                              <span>{calculateDuration(group.checked_in_at)}</span>
                               <button
-                                onClick={() => handleFobScan(occ.fob_uid || occ.assignment_id)}
+                                onClick={() => handleFobScan(group.fob_uid)}
                                 className="text-rose-400 hover:text-rose-300 hover:underline font-bold ml-2"
                               >
                                 Out

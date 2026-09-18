@@ -34,7 +34,7 @@ const formatCheckInTime = (checkedInAt) => {
   return `${month} ${day}, ${year} ${hours}${minutes}H`;
 };
 
-// Groups room occupants strictly by key fob or check-in timestamp
+// Groups room occupants strictly by key fob or check-in transaction timestamp
 const groupOccupantsByTransaction = (occupants = []) => {
   if (!occupants || occupants.length === 0) return [];
 
@@ -42,7 +42,6 @@ const groupOccupantsByTransaction = (occupants = []) => {
 
   occupants.forEach((occ) => {
     const rawTime = occ.checked_in_at || occ.check_in || occ.created_at || '';
-    // Truncate timestamp to minute precision (YYYY-MM-DDTHH:MM) to group bulk inserts
     const timeKey = rawTime ? rawTime.substring(0, 16) : '';
     const groupKey = occ.fob_uid || timeKey || occ.assignment_id || occ.id;
 
@@ -130,6 +129,7 @@ export default function PhoneKiosk() {
     }
   }, []);
 
+  // Collect set of staff_ids and names currently checked into any room
   const activeOccupantSet = new Set();
   allRooms.forEach((r) => {
     if (r.occupants) {
@@ -563,25 +563,25 @@ export default function PhoneKiosk() {
           )}
 
           {step === 'SCAN_KEY' && (
-  <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-xl shadow-2xl h-full">
-    <div className="animate-bounce text-5xl mb-4">🔑</div>
-    <h2 className="text-xl font-bold text-white mb-2">Room {selectedRoom?.room_number} Selected</h2>
-    <p className="text-sm text-slate-300 mb-6 max-w-xs">
-      Tap key fob on scanner to assign <span className="text-amber-400 font-bold">{selectedPersons.length} occupant(s)</span>.
-    </p>
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-xl shadow-2xl h-full">
+              <div className="animate-bounce text-5xl mb-4">🔑</div>
+              <h2 className="text-xl font-bold text-white mb-2">Room {selectedRoom?.room_number} Selected</h2>
+              <p className="text-sm text-slate-300 mb-6 max-w-xs">
+                Tap key fob on scanner to assign <span className="text-amber-400 font-bold">{selectedPersons.length} occupant(s)</span>.
+              </p>
 
-    <button
-      onClick={() => handleFobScan(`FOB_R${selectedRoom?.room_number}_${Date.now().toString().slice(-4)}`)}
-      className="mb-6 px-5 py-2.5 bg-amber-500/20 border border-amber-500/40 text-amber-300 rounded-xl text-xs font-mono hover:bg-amber-500/30 transition active:scale-95"
-    >
-      ⚡ Dev Sim: Tap New Fob for Room {selectedRoom?.room_number}
-    </button>
+              <button
+                onClick={() => handleFobScan(`FOB_R${selectedRoom?.room_number}_${Date.now().toString().slice(-4)}`)}
+                className="mb-6 px-5 py-2.5 bg-amber-500/20 border border-amber-500/40 text-amber-300 rounded-xl text-xs font-mono hover:bg-amber-500/30 transition active:scale-95"
+              >
+                ⚡ Dev Sim: Tap New Fob for Room {selectedRoom?.room_number}
+              </button>
 
-    <button onClick={() => resetKiosk(0)} className="text-xs text-slate-400 hover:text-white underline transition">
-      Cancel
-    </button>
-  </div>
-)}
+              <button onClick={() => resetKiosk(0)} className="text-xs text-slate-400 hover:text-white underline transition">
+                Cancel
+              </button>
+            </div>
+          )}
 
           {step === 'SUCCESS' && (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-emerald-500/10 rounded-2xl border border-emerald-500/40 backdrop-blur-xl shadow-2xl h-full">

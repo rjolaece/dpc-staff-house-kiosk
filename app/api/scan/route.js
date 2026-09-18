@@ -37,21 +37,53 @@ export async function POST(req) {
       }
 
       return NextResponse.json({
-        message: 'Successfully checked out group!',
+        message: 'Successfully checked out occupant(s)!',
         assignments: data,
       });
     }
 
     // ----------------------------------------------------
-    // BRANCH 2: CHECK-IN WITH SPECIFIC KEY FOB
+    // BRANCH 2: CHECK-IN (WHEN ROOM_ID IS PASSED)
     // ----------------------------------------------------
     if (room_id) {
       const personList = Array.isArray(persons) && persons.length > 0
         ? persons
         : [{ staff_id: staff_id || null, guest_name: guest_name || null }];
 
-      // Generate a unique fob string if none provided (e.g. FOB_R101_1726650000)
-      const uniqueFob = key_fob_uid || `FOB_${room_id}_${Date.now()}`;
+      // --- DUPLICATE CHECK-IN RESTRICTION ---
+      const { data: activeAssignments, error: activeErr } = await supabase
+        .from('room_assignments')
+        .select('staff_id, guest_name')
+        .eq('status', 'ACTIVE')
+        .is('check_out', null);
+
+      if (activeErr) {
+        console.error('Active occupants lookup failed:', activeErr);
+      } else if (activeAssignments && activeAssignments.length > 0) {
+        const alreadyCheckedIn = [];
+
+        personList.forEach((p) => {
+          const isAlreadyActive = activeAssignments.some((active) => {
+            if (p.staff_id && active.staff_id === p.staff_id) return true;
+            if (p.guest_name && active.guest_name && active.guest_name.toLowerCase() === p.guest_name.toLowerCase()) return true;
+            return false;
+          });
+
+          if (isAlreadyActive) {
+            alreadyCheckedIn.push(p.guest_name || 'Selected Staff');
+          }
+        });
+
+        if (alreadyCheckedIn.length > 0) {
+          return NextResponse.json(
+            { error: `Cannot check in: ${alreadyCheckedIn.join(', ')} is already checked into a room.` },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Generate a unique fob UID per transaction if none provided
+      const uniqueFob = key_fob_uid || `FOB_R${room_id}_${Date.now()}`;
 
       const insertPayload = personList.map((p) => ({
         room_id: room_id,
@@ -74,7 +106,7 @@ export async function POST(req) {
 
       const count = personList.length;
       return NextResponse.json({
-        message: `Successfully checked in ${count} person${count > 1 ? 's' : ''} with key fob ${uniqueFob}!`,
+        message: `Successfully checked in ${count} person${count > 1 ? 's' : ''}!`,
         assignments: data,
       });
     }

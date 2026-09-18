@@ -34,13 +34,15 @@ const formatCheckInTime = (checkedInAt) => {
   return `${month} ${day}, ${year} ${hours}${minutes}H`;
 };
 
-const groupOccupantsByFob = (occupants = []) => {
+// Groups occupants strictly by check-in transaction (fob_uid or exact timestamp)
+const groupOccupantsByTransaction = (occupants = []) => {
   if (!occupants || occupants.length === 0) return [];
 
   const groupsMap = new Map();
 
   occupants.forEach((occ) => {
-    const groupKey = occ.fob_uid || occ.checked_in_at?.substring(0, 16) || occ.assignment_id;
+    // Unique group key per check-in transaction
+    const groupKey = occ.fob_uid || occ.checked_in_at || occ.assignment_id;
 
     if (!groupsMap.has(groupKey)) {
       groupsMap.set(groupKey, {
@@ -281,7 +283,7 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH CONTINUOUS SMOOTH PULSE FOR OVERBOOKED ROOMS */}
+        {/* LEFT COLUMN: ROOM GRID DISPLAY (TILES GROUPED STRICTLY BY CHECK-IN TRANSACTION) */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Overview</span>
@@ -302,7 +304,7 @@ export default function PhoneKiosk() {
                 const isOverbooked = room.occupant_count > room.max_capacity;
                 const isFull = room.status === 'FULL' || room.occupant_count >= room.max_capacity;
                 const isPartial = room.status === 'PARTIAL' && !isFull;
-                const groupedOccupants = groupOccupantsByFob(room.occupants);
+                const checkInGroups = groupOccupantsByTransaction(room.occupants);
 
                 return (
                   <div
@@ -324,9 +326,9 @@ export default function PhoneKiosk() {
                       </span>
                     </div>
 
-                    {groupedOccupants && groupedOccupants.length > 0 ? (
+                    {checkInGroups && checkInGroups.length > 0 ? (
                       <div className="flex flex-col gap-1.5 my-auto overflow-auto max-h-[120px] lg:max-h-[145px] py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                        {groupedOccupants.map((group, idx) => (
+                        {checkInGroups.map((group, idx) => (
                           <div 
                             key={idx} 
                             className="w-full bg-black/40 rounded-lg p-2 text-[8.5px] text-left leading-tight border border-white/5 shadow-inner flex flex-col justify-between shrink-0"
@@ -481,7 +483,6 @@ export default function PhoneKiosk() {
             </div>
           )}
 
-          {/* STEP 2: SELECT ROOM (NEGATIVE VALUES FOR OVERBOOKED, RED BLENDED BORDER) */}
           {step === 'SELECT_ROOM' && (
             <div className="flex-1 flex flex-col justify-center text-center bg-white/5 p-6 rounded-2xl border border-white/10 backdrop-blur-xl shadow-2xl h-full">
               <p className="text-blue-400 font-medium text-base mb-1">

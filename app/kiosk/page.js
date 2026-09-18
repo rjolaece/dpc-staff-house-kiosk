@@ -121,6 +121,7 @@ export default function PhoneKiosk() {
     }
   }, []);
 
+  // Collect set of staff_ids and guest names currently checked into any room
   const activeOccupantSet = new Set();
   allRooms.forEach((r) => {
     if (r.occupants) {
@@ -131,6 +132,7 @@ export default function PhoneKiosk() {
     }
   });
 
+  // Check-in action handler
   const handleFobScan = async (fobUid) => {
     setErrorMsg('');
     try {
@@ -157,9 +159,40 @@ export default function PhoneKiosk() {
 
       setStatusMsg(data.message || 'Action completed successfully!');
       setStep('SUCCESS');
+      fetchInitialData();
       resetKiosk(3000);
     } catch {
       setErrorMsg('Failed to process scan.');
+    }
+  };
+
+  // Dedicated direct check-out handler (does not require room_id)
+  const handleCheckOut = async (assignmentIds, fobUid) => {
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignment_ids: assignmentIds,
+          key_fob_uid: fobUid,
+        }),
+      });
+
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Checkout failed.');
+        return;
+      }
+
+      setStatusMsg(data.message || 'Successfully checked out!');
+      setStep('SUCCESS');
+      fetchInitialData();
+      resetKiosk(3000);
+    } catch {
+      setErrorMsg('Failed to process checkout.');
     }
   };
 
@@ -283,7 +316,7 @@ export default function PhoneKiosk() {
       {/* MAIN CONTAINER */}
       <div className="flex-1 my-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-        {/* LEFT COLUMN: ROOM GRID DISPLAY (TILES GROUPED STRICTLY BY CHECK-IN TRANSACTION) */}
+        {/* LEFT COLUMN: 8-ROOM GRID DISPLAY WITH CONTINUOUS SMOOTH PULSE FOR OVERBOOKED ROOMS */}
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">
             <span>Room Overview</span>
@@ -345,8 +378,8 @@ export default function PhoneKiosk() {
                             <div className="flex justify-between items-center text-amber-400 font-mono text-[7.5px] mt-1.5 whitespace-nowrap">
                               <span>{calculateDuration(group.checked_in_at)}</span>
                               <button
-                                onClick={() => handleFobScan(group.fob_uid)}
-                                className="text-rose-400 hover:text-rose-300 hover:underline font-bold ml-2"
+                                onClick={() => handleCheckOut(group.assignment_ids, group.fob_uid)}
+                                className="text-rose-400 hover:text-rose-300 hover:underline font-bold ml-2 cursor-pointer"
                               >
                                 Out
                               </button>

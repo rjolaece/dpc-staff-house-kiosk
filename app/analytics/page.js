@@ -16,17 +16,23 @@ import {
 export default function AnalyticsDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     fetch('/api/analytics')
       .then((res) => res.json())
       .then((d) => {
         setData(d);
         setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Analytics fetch error:', err);
+        setLoading(false);
       });
   }, []);
 
-  if (loading) {
+  if (loading || !isMounted) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center font-mono">
         Loading Occupant Analytics...
@@ -47,7 +53,7 @@ export default function AnalyticsDashboard() {
         </div>
         <a
           href="/kiosk"
-          className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-semibold transition"
+          className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-semibold transition text-slate-200 hover:text-white"
         >
           ← Back to Kiosk
         </a>
@@ -61,18 +67,22 @@ export default function AnalyticsDashboard() {
           <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-4">
             ⏱️ Average Stay Duration per Room (Hours)
           </h2>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data?.avgStayPerRoom}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="room" stroke="#94a3b8" fontSize={12} />
-                <YAxis stroke="#94a3b8" fontSize={12} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '12px' }}
-                />
-                <Bar dataKey="avgHours" fill="#38bdf8" radius={[6, 6, 0, 0]} name="Avg Stay (hrs)" />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="h-64 w-full relative">
+            {data?.avgStayPerRoom?.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.avgStayPerRoom}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                  <XAxis dataKey="room" stroke="#94a3b8" fontSize={12} />
+                  <YAxis stroke="#94a3b8" fontSize={12} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '12px' }}
+                  />
+                  <Bar dataKey="avgHours" fill="#38bdf8" radius={[6, 6, 0, 0]} name="Avg Stay (hrs)" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-xs text-slate-500 font-mono">No completed stay data yet</div>
+            )}
           </div>
         </div>
 
@@ -81,38 +91,46 @@ export default function AnalyticsDashboard() {
           <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-4">
             👤 Top Frequent Guests / Staff
           </h2>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data?.topOccupants} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis type="number" stroke="#94a3b8" fontSize={12} />
-                <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={11} width={100} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '12px' }}
-                />
-                <Bar dataKey="checkIns" fill="#818cf8" radius={[0, 6, 6, 0]} name="Check-Ins" />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="h-64 w-full relative">
+            {data?.topOccupants?.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.topOccupants} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                  <XAxis type="number" stroke="#94a3b8" fontSize={12} />
+                  <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={11} width={110} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '12px' }}
+                  />
+                  <Bar dataKey="checkIns" fill="#818cf8" radius={[0, 6, 6, 0]} name="Check-Ins" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-xs text-slate-500 font-mono">No occupant history found</div>
+            )}
           </div>
         </div>
 
-        {/* 3. PEAK USAGE HOURS & DAYS */}
+        {/* 3. PEAK USAGE HOURS */}
         <div className="bg-slate-900/80 border border-white/10 p-5 rounded-2xl backdrop-blur-xl">
           <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-4">
             📈 Peak Check-in Hours of the Day
           </h2>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data?.peakHours}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="hour" stroke="#94a3b8" fontSize={10} />
-                <YAxis stroke="#94a3b8" fontSize={12} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '12px' }}
-                />
-                <Area type="monotone" dataKey="checkIns" stroke="#34d399" fill="#34d39920" name="Check-Ins" />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="h-64 w-full relative">
+            {data?.peakHours?.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data.peakHours}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                  <XAxis dataKey="hour" stroke="#94a3b8" fontSize={10} />
+                  <YAxis stroke="#94a3b8" fontSize={12} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '12px' }}
+                  />
+                  <Area type="monotone" dataKey="checkIns" stroke="#34d399" fill="#34d39920" name="Check-Ins" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-xs text-slate-500 font-mono">No check-in hourly records</div>
+            )}
           </div>
         </div>
 
@@ -121,20 +139,24 @@ export default function AnalyticsDashboard() {
           <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-4">
             🚨 Room Turnover & Overbooking Frequency
           </h2>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data?.roomTurnoverAndOverbook}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="room" stroke="#94a3b8" fontSize={12} />
-                <YAxis stroke="#94a3b8" fontSize={12} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '12px' }}
-                />
-                <Legend />
-                <Bar dataKey="turnover" fill="#60a5fa" radius={[4, 4, 0, 0]} name="Total Turnover" />
-                <Bar dataKey="overbooked" fill="#f87171" radius={[4, 4, 0, 0]} name="Overbook Events" />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="h-64 w-full relative">
+            {data?.roomTurnoverAndOverbook?.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.roomTurnoverAndOverbook}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                  <XAxis dataKey="room" stroke="#94a3b8" fontSize={12} />
+                  <YAxis stroke="#94a3b8" fontSize={12} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '12px' }}
+                  />
+                  <Legend />
+                  <Bar dataKey="turnover" fill="#60a5fa" radius={[4, 4, 0, 0]} name="Total Turnover" />
+                  <Bar dataKey="overbooked" fill="#f87171" radius={[4, 4, 0, 0]} name="Overbook Events" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-xs text-slate-500 font-mono">No room turnover records</div>
+            )}
           </div>
         </div>
 

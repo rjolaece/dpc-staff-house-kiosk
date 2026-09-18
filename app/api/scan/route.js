@@ -16,24 +16,10 @@ function getSupabaseClient() {
 export async function POST(req) {
   try {
     const supabase = getSupabaseClient();
-    const { key_fob_uid, persons, room_id, staff_id, guest_name } = await req.json();
+    const { persons, room_id, staff_id, guest_name } = await req.json();
 
     if (!room_id) {
       return NextResponse.json({ error: 'Room selection is required.' }, { status: 400 });
-    }
-
-    // Lookup key_id from public.keys table using key_fob_uid if provided
-    let matchedKeyId = null;
-    if (key_fob_uid) {
-      const { data: keyRecord } = await supabase
-        .from('keys')
-        .select('id')
-        .eq('fob_uid', key_fob_uid)
-        .maybeSingle();
-
-      if (keyRecord) {
-        matchedKeyId = keyRecord.id;
-      }
     }
 
     // Support multi-person array or single-person fallback
@@ -41,13 +27,11 @@ export async function POST(req) {
       ? persons
       : [{ staff_id: staff_id || null, guest_name: guest_name || null }];
 
-    // Match exact Supabase room_assignments columns:
-    // (room_id, staff_id, guest_name, key_id, status, check_in)
+    // Payload mapped strictly to confirmed columns: room_id, staff_id, guest_name, status, check_in
     const insertPayload = personList.map((p) => ({
       room_id: room_id,
       staff_id: p.staff_id || null,
       guest_name: p.guest_name || null,
-      key_id: matchedKeyId,
       status: 'ACTIVE',
       check_in: new Date().toISOString(),
     }));
